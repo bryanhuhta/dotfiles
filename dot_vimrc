@@ -1,0 +1,17 @@
+set      ruler
+set      number
+set      list
+set      listchars=tab:>-,trail:.,extends:#,nbsp:.,multispace:.
+
+filetype plugin indent on
+set      ai
+set      shiftwidth=4
+
+syntax   on
+
+call plug#begin()
+
+Plug 'ledger/vim-ledger'
+
+call plug#end()
+
