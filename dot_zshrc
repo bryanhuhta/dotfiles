@@ -1,0 +1,46 @@
+# If you come from bash you might have to change your $PATH.
+# export PATH=$HOME/bin:/usr/local/bin:$PATH
+
+# Path to your oh-my-zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
+
+ZSH_THEME="custom-eastwood"
+DISABLE_UPDATE_PROMPT="true"
+plugins=(git virtualenv)
+
+source $ZSH/oh-my-zsh.sh
+
+# Homebrew.
+export HOMEBREW_PREFIX="/opt/homebrew";
+export HOMEBREW_CELLAR="/opt/homebrew/Cellar";
+export HOMEBREW_REPOSITORY="/opt/homebrew";
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin${PATH+:$PATH}";
+export MANPATH="/opt/homebrew/share/man${MANPATH+:$MANPATH}:";
+export INFOPATH="/opt/homebrew/share/info:${INFOPATH:-}";
+
+# Go environment variables.
+export GOPATH=$HOME/go
+export PATH=$PATH:$HOME/go/bin
+
+# Allows code to be used on the commandline.
+export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+
+# Opt out of dotnet telementry.
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+export GPG_TTY=$(tty)
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# Make ag more usable
+alias ag="ag --nogroup"
+
+# FUNCTIONS
+
+# Pretty print path.
+function ppath() {
+  echo -e ${PATH//:/\\n}
+}
+
