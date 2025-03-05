@@ -1,17 +1,17 @@
-set      ruler
-set      number
-set      list
-set      listchars=tab:>-,trail:.,extends:#,nbsp:.,multispace:.
+set ruler
+set number
+
+" Set column rulers, use a color slightly lighter than the background.
+set colorcolumn=81,121
+highlight ColorColumn ctermbg=235 guibg=#262626
+
+" Display whitespace.
+set list
+set listchars=tab:>-,trail:.,multispace:.
 
 filetype plugin indent on
-set      ai
-set      shiftwidth=4
+set ai
+set tabstop=4
+set shiftwidth=4
 
-syntax   on
-
-call plug#begin()
-
-Plug 'ledger/vim-ledger'
-
-call plug#end()
-
+syntax on
