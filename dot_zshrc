@@ -41,6 +41,5 @@ alias ag="ag --nogroup"
 
 # Pretty print path.
 function ppath() {
-  echo -e ${PATH//:/\\n}
+  echo -e "${PATH//:/\\n}"
 }
-
