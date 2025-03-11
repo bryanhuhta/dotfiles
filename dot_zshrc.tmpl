@@ -1,0 +1,191 @@
+# If you come from bash you might have to change your $PATH.
+# export PATH=$HOME/bin:/usr/local/bin:$PATH
+
+# Path to your oh-my-zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
+
+ZSH_THEME="custom-eastwood"
+DISABLE_UPDATE_PROMPT="true"
+plugins=(git virtualenv)
+
+source $ZSH/oh-my-zsh.sh
+
+# Homebrew.
+export HOMEBREW_PREFIX="/opt/homebrew";
+export HOMEBREW_CELLAR="/opt/homebrew/Cellar";
+export HOMEBREW_REPOSITORY="/opt/homebrew";
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin${PATH+:$PATH}";
+export MANPATH="/opt/homebrew/share/man${MANPATH+:$MANPATH}:";
+export INFOPATH="/opt/homebrew/share/info:${INFOPATH:-}";
+
+# Go environment variables.
+export GOPATH=$HOME/go
+export PATH=$PATH:$HOME/go/bin
+
+# Allows code to be used on the commandline.
+export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+
+# Opt out of dotnet telementry.
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+export GPG_TTY=$(tty)
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# Make ag more usable
+alias ag="ag --nogroup"
+
+# FUNCTIONS
+
+# Pretty print path.
+function ppath() {
+  echo -e ${PATH//:/\\n}
+}
+
+{{- if eq .chezmoi.hostname "Bryans-MacBook-Pro" }}
+
+# Work laptop
+
+# git
+alias gfm="git fetch && git merge"
+alias gbomb="git restore --source HEAD --staged --worktree . && git clean -fd"
+
+# Deployment tools
+export DEPLOY_TOOLS_DIR="$HOME/grafana/deployment_tools"
+alias tklocal="${DEPLOY_TOOLS_DIR}/scripts/tanka/tk"
+alias ignore="${DEPLOY_TOOLS_DIR}/scripts/flux/ignore.sh"
+alias vaultd="VAULT_INSTANCE=dev GRAFANA_TEAM=pyroscope ${DEPLOY_TOOLS_DIR}/scripts/vault/vault-token"
+alias vaultp="VAULT_INSTANCE=prod GRAFANA_TEAM=pyroscope ${DEPLOY_TOOLS_DIR}/scripts/vault/vault-token"
+
+# GCOM
+export GCOM_CONFIG_DIR="$HOME/.gcom"
+alias gcomd="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-dev"
+alias gcomo="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-ops"
+alias gcomp="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom"
+alias gcomd-reconcile="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-dev-reconcile"
+alias gcomo-reconcile="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-ops-reconcile"
+alias gcom-reconcile="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-reconcile"
+export PATH="${PATH}:${DEPLOY_TOOLS_DIR}/scripts/gcom"
+
+# k9s
+alias k9sdev="k9s --context dev-us-central-0 --namespace fire-dev-001"
+alias k9sops="k9s --context ops-us-east-0 --namespace profiles-ops-001"
+alias k9sctx="k9s --context"
+
+# kubectx
+alias ktx="kubectx -c"
+alias ktxlist="kubectx -c | xargs printf 'current: %s\n\n' && kubectx | grep -vE '^pop-'"
+
+# profilecli
+export PATH=$PATH:"${HOME}/grafana/pyroscope"
+
+# Add google cloud sdk to path.
+export PATH=$PATH:/opt/homebrew/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin
+
+# Ruby
+export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
+
+# jenv
+export PATH="$HOME/.jenv/shims:$PATH"
+if which jenv > /dev/null; then
+  eval "$(jenv init -)";
+fi
+
+# depot_tools (used to build js v8 engine)
+export PATH="$HOME/tools/depot_tools:$PATH"
+
+# Run deployment tools setup-context
+function deploysso() {
+  cd "${DEPLOY_TOOLS_DIR}"
+  ./setup-context -p google
+  ./setup-context -p aws
+  cd -
+}
+
+function sso() {
+  gcloud auth login
+  AWS_PROFILE=workloads-dev AWS_CONFIG_FILE="${DEPLOY_TOOLS_DIR}/scripts/sso/aws_config_readonly" aws sso login
+}
+
+function kubelogin() {
+  cd "${DEPLOY_TOOLS_DIR}"
+}
+
+# Delete local branches from a repository.
+function gitbranchrm() {
+  git for-each-ref --format '%(refname:short)' refs/heads | grep -vE 'master|main|next' | xargs git branch -d
+}
+
+# Run k6 test
+function runk6 {
+  file=$1
+  K6_CLOUD_LOGS_TAIL_URL=wss://cloudlogs.staging.k6.io/api/v1/tail\
+  K6_CLOUD_HOST=https://ingest.staging.k6.io\
+  K6_CLOUD_TOKEN="27bb99e159be3426e1d77e41096f5694e6de14824c2393a753e9e7d7b6d73661"\
+  k6 run --out cloud $file
+}
+
+# Run local k6 test
+function runlocalk6 {
+  file=$1
+  K6_CLOUD_LOGS_TAIL_URL=wss://cloudlogs.staging.k6.io/api/v1/tail\
+  K6_CLOUD_HOST=https://ingest.staging.k6.io\
+  K6_CLOUD_TOKEN="27bb99e159be3426e1d77e41096f5694e6de14824c2393a753e9e7d7b6d73661"\
+  /Users/bryan/grafana/k6/k6 run --out cloud $file
+}
+
+function ts2date () {
+  TS=$1
+  node -e "console.log(new Date(${TS}))"
+}
+
+function gifify {
+  file="${1}"
+  name=$(basename "${file}" ".webp")
+  magick -format gif "${file}" "${name}.gif"
+}
+
+function slackify {
+  infile="${1}"
+  files=()
+  if [[ -d "${infile}" ]]; then
+    files=( $(ls "${infile}"/* ) )
+  else
+    files+="${infile}"
+  fi
+
+  outdir="${2}"
+  if [[ -n "${outdir}" ]]; then
+    if [[ -f "${outdir}" ]]; then
+      echo "output directory is a file that already exists: ${outdir}"
+      exit 1
+    fi
+
+    if [[ ! -d "${outdir}" ]]; then
+      mkdir "${outdir}"
+    fi
+  fi
+
+  for f in "${files[@]}"; do
+    echo "slackifying ${f}"
+    name=$(echo "${f}" | cut -d"." -f1)
+    ext=$(echo "${f}" | cut -d"." -f2)
+    outfile="${name}-slackified.${ext}"
+    if [[ -n "${outdir}" ]]; then
+      outfile=$(echo "${outfile}" | cut -d'/' -f2-)
+      outfile="${outdir}/${outfile}"
+    fi
+
+    magick "${f}" -resize 44000000@ "${outfile}"
+  done
+}
+
+function jpegify () {
+  file="${1}"
+  name=$(basename "${file}" ".webp")
+  magick -format jpg "${file}" "${name}.jpg"
+}
+
+{{- end }}
