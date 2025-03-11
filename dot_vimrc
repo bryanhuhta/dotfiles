@@ -1,6 +1,5 @@
 set ruler
-set number
-set autoindent
+set relativenumber
 
 " Set column rulers, use a color slightly lighter than the background.
 set colorcolumn=81,121
