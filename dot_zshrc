@@ -37,6 +37,9 @@ export NVM_DIR="$HOME/.nvm"
 # Make ag more usable
 alias ag="ag --nogroup"
 
+# Fast console clear
+alias c="clear"
+
 # FUNCTIONS
 
 # Pretty print path.
