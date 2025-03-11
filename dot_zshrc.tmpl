@@ -94,7 +94,9 @@ if which jenv > /dev/null; then
 fi
 
 # depot_tools (used to build js v8 engine)
-export PATH="$HOME/tools/depot_tools:$PATH"
+#  NOTE(bryan): Uncomment this to build Node v8 from source. Otherwise this will
+#               conflict with other usages of clang-format.
+# export PATH="$HOME/tools/depot_tools:$PATH"
 
 # Run deployment tools setup-context
 function deploysso() {
