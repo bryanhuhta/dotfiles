@@ -98,6 +98,9 @@ fi
 #               conflict with other usages of clang-format.
 # export PATH="$HOME/tools/depot_tools:$PATH"
 
+# k6 dev config
+alias k6dev="K6_CLOUD_HOST=https://ingest.staging.k6.io k6"
+
 # Run deployment tools setup-context
 function deploysso() {
   cd "${DEPLOY_TOOLS_DIR}"
@@ -118,24 +121,6 @@ function kubelogin() {
 # Delete local branches from a repository.
 function gitbranchrm() {
   git for-each-ref --format '%(refname:short)' refs/heads | grep -vE 'master|main|next' | xargs git branch -d
-}
-
-# Run k6 test
-function runk6 {
-  file=$1
-  K6_CLOUD_LOGS_TAIL_URL=wss://cloudlogs.staging.k6.io/api/v1/tail\
-  K6_CLOUD_HOST=https://ingest.staging.k6.io\
-  K6_CLOUD_TOKEN="27bb99e159be3426e1d77e41096f5694e6de14824c2393a753e9e7d7b6d73661"\
-  k6 run --out cloud $file
-}
-
-# Run local k6 test
-function runlocalk6 {
-  file=$1
-  K6_CLOUD_LOGS_TAIL_URL=wss://cloudlogs.staging.k6.io/api/v1/tail\
-  K6_CLOUD_HOST=https://ingest.staging.k6.io\
-  K6_CLOUD_TOKEN="27bb99e159be3426e1d77e41096f5694e6de14824c2393a753e9e7d7b6d73661"\
-  /Users/bryan/grafana/k6/k6 run --out cloud $file
 }
 
 function ts2date () {
