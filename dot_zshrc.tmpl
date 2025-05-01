@@ -101,6 +101,11 @@ fi
 # k6 dev config
 alias k6dev="K6_CLOUD_HOST=https://ingest.staging.k6.io k6"
 
+# Open files with Cursor
+function cursor {
+  /Applications/Cursor.app/Contents/MacOS/Cursor $@
+}
+
 # Run deployment tools setup-context
 function deploysso() {
   cd "${DEPLOY_TOOLS_DIR}"
