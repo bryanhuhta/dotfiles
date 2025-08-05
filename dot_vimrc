@@ -22,4 +22,13 @@ set tabstop=4
 set shiftwidth=4
 set expandtab
 
+set splitright
+set splitbelow
+
 syntax on
+
+nnoremap <silent> <C-E> :Lexplore<CR>
+nnoremap <leader>r :set relativenumber! number!<CR>
+
+" Go
+let g:go_fmt_command = "goimports"
