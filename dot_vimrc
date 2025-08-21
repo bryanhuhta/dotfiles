@@ -7,6 +7,7 @@ call plug#end()
 
 set ruler
 set relativenumber
+syntax on
 
 " Set column rulers, use a color slightly lighter than the background.
 set colorcolumn=81,121
@@ -16,18 +17,26 @@ highlight ColorColumn ctermbg=235 guibg=#262626
 set list
 set listchars=tab:>-,trail:.,multispace:.
 
+" Set indents.
 filetype plugin indent on
 set ai
 set tabstop=4
 set shiftwidth=4
 set expandtab
 
+" Folding options.
+set foldmethod=syntax
+set nofoldenable
+set foldlevel=99
+
+" Control how vsplit and hsplit work.
 set splitright
 set splitbelow
 
-syntax on
-
+" Open file explorer.
 nnoremap <silent> <C-E> :Lexplore<CR>
+
+" Toggle relative/absolute line numbers.
 nnoremap <leader>r :set relativenumber! number!<CR>
 
 " Go
