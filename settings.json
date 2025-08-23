@@ -89,7 +89,7 @@
     "editor.suggest.snippetsPreventQuickSuggestions": false,
     "editor.suggestSelection": "first",
     "editor.tabCompletion": "onlySnippets",
-    "editor.wordBasedSuggestions": false,
+    "editor.wordBasedSuggestions": "off",
     "editor.defaultFormatter": "Dart-Code.dart-code"
   },
   "[erb]": {
@@ -100,7 +100,7 @@
     "editor.defaultFormatter": "golang.go",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-      "source.organizeImports": true
+      "source.organizeImports": "explicit"
     },
     "editor.suggest.snippetsPreventQuickSuggestions": false
   },
@@ -191,5 +191,6 @@
   "terminal.integrated.defaultProfile.osx": "zsh",
   "git.openRepositoryInParentFolders": "never",
   "git.suggestSmartCommit": false,
-  "editor.fontFamily": "JetBrains Mono, Menlo, Monaco, 'Courier New', monospace"
+  "editor.fontFamily": "JetBrains Mono, Menlo, Monaco, 'Courier New', monospace",
+  "update.showReleaseNotes": false
 }
