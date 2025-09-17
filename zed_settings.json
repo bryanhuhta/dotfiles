@@ -43,5 +43,10 @@
       "min_column": 50,
       "show_commit_summary": true
     }
+  },
+  "language_overrides": {
+    "SQL": {
+      "tab_size": 2
+    }
   }
 }
