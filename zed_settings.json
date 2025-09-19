@@ -13,7 +13,7 @@
   },
   "disable_ai": true,
   "ui_font_size": 16,
-  "buffer_font_size": 16,
+  "buffer_font_size": 14,
   "buffer_font_features": {
     "calt": false,
     "liga": false
@@ -42,11 +42,6 @@
     "inline_blame": {
       "min_column": 50,
       "show_commit_summary": true
-    }
-  },
-  "language_overrides": {
-    "SQL": {
-      "tab_size": 2
     }
   }
 }
