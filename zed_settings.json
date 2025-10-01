@@ -43,5 +43,11 @@
       "min_column": 50,
       "show_commit_summary": true
     }
+  },
+
+  "languages": {
+    "Shell Script": {
+      "tab_size": 2
+    }
   }
 }
