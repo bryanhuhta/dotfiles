@@ -136,8 +136,20 @@ function gitbranchrm() {
 }
 
 function ts2date () {
-  TS=$1
-  node -e "console.log(new Date(${TS}))"
+  local localtime=false
+
+  if [[ $1 == "-l" ]]; then
+    localtime=true
+    shift
+  fi
+
+  for ts in "$@"; do
+    if $localtime; then
+      node -e "console.log(new Date(${ts}).toString())"
+    else
+      node -e "console.log(new Date(${ts}).toUTCString())"
+    fi
+  done
 }
 
 function gifify {
