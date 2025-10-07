@@ -45,7 +45,7 @@ function ppath() {
   echo -e ${PATH//:/\\n}
 }
 
-{{- if eq .chezmoi.hostname "Bryans-MacBook-Pro" }}
+{{- if or (eq .chezmoi.hostname "Bryans-MacBook-Pro") (eq .chezmoi.hostname "Mac") }}
 
 # Work laptop
 
@@ -126,8 +126,59 @@ function sso() {
   AWS_PROFILE=workloads-dev AWS_CONFIG_FILE="${DEPLOY_TOOLS_DIR}/scripts/sso/aws_config_readonly" aws sso login
 }
 
-function kubelogin() {
-  cd "${DEPLOY_TOOLS_DIR}"
+# Render all mermaid blocks in a markdown file.
+function mermaid() {
+  local output_dir=""
+  local input=""
+
+  # Parse flags
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -d|--dir)
+        output_dir="$2"
+        shift 2
+        ;;
+      *)
+        input="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [ -z "$input" ]; then
+    echo "Usage: mermaid [-d output_dir] <file>"
+    return 1
+  fi
+
+  if [ ! -f "$input" ]; then
+    echo "Error: '$input' not found."
+    return 1
+  fi
+
+  local dir
+  local filename
+  local base
+  local ext
+  local output
+
+  dir=$(dirname "$input")
+  filename=$(basename "$input")
+  base="${filename%.*}"          # strip extension
+  ext="${filename##*.}"          # get extension
+
+  # Default to same directory if -d not specified
+  if [ -z "$output_dir" ]; then
+    output_dir="$dir"
+  fi
+
+  mkdir -p "$output_dir"
+  output="${output_dir}/${base}.render.${ext}"
+
+  docker run --rm -u "$(id -u)":"$(id -g)" \
+    -v "${PWD}:/data" \
+    minlag/mermaid-cli \
+    -i "$input" \
+    -o "$output"
 }
 
 # Delete local branches from a repository.
