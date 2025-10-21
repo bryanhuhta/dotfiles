@@ -85,6 +85,9 @@ alias k9sctx="k9s --context"
 alias ktx="kubectx -c"
 alias ktxlist="kubectx -c | xargs printf 'current: %s\n\n' && kubectx | grep -vE '^pop-'"
 
+# k8s contexts
+export KUBECONFIG="$HOME/.kube/config":"$HOME/.kube/config-kind"
+
 # profilecli
 export PATH=$PATH:"${HOME}/grafana/pyroscope"
 
