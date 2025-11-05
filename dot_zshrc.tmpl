@@ -151,8 +151,7 @@ function sso() {
 
     if [[ "$force" == true ]]; then
       gcloud auth login
-    else
-    if ! gcloud auth print-access-token >/dev/null 2>&1; then
+    elif ! gcloud auth print-access-token >/dev/null 2>&1; then
       gcloud auth login
     fi
 
