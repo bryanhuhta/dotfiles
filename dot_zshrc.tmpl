@@ -119,6 +119,24 @@ function cursor {
 function sso() {
   local env="${1:-dev}"
 
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -f|--force)
+        force=true
+        shift
+        ;;
+      dev|ops|prod)
+        env="$1"
+        shift
+        ;;
+      *)
+        echo "Unknown option: $1"
+        echo "Usage: sso [-f|--force] [dev|ops|prod]"
+        return 1
+        ;;
+    esac
+  done
+
   if [[ -z "${DEPLOY_TOOLS_DIR}" ]]; then
     echo "Error: DEPLOY_TOOLS_DIR is not set."
     return 1
@@ -131,6 +149,9 @@ function sso() {
       exit 1
     }
 
+    if [[ "$force" == true ]]; then
+      gcloud auth login
+    else
     if ! gcloud auth print-access-token >/dev/null 2>&1; then
       gcloud auth login
     fi
