@@ -131,7 +131,9 @@ function sso() {
       exit 1
     }
 
-    gcloud auth login
+    if ! gcloud auth print-access-token >/dev/null 2>&1; then
+      gcloud auth login
+    fi
 
     case "$env" in
       dev)
