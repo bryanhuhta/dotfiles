@@ -116,14 +116,6 @@ function cursor {
   /Applications/Cursor.app/Contents/MacOS/Cursor $@
 }
 
-# Run deployment tools setup-context
-function deploysso() {
-  cd "${DEPLOY_TOOLS_DIR}"
-  ./setup-context -p google
-  ./setup-context -p aws
-  cd -
-}
-
 function sso() {
   local env="${1:-dev}"
 
