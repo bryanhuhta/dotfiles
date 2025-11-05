@@ -125,8 +125,39 @@ function deploysso() {
 }
 
 function sso() {
-  gcloud auth login
-  AWS_PROFILE=workloads-dev AWS_CONFIG_FILE="${DEPLOY_TOOLS_DIR}/scripts/sso/aws_config_readonly" aws sso login
+  local env="${1:-dev}"
+
+  if [[ -z "${DEPLOY_TOOLS_DIR}" ]]; then
+    echo "Error: DEPLOY_TOOLS_DIR is not set."
+    return 1
+  fi
+
+  # Run in a subshell
+  (
+    cd "${DEPLOY_TOOLS_DIR}" || {
+      echo "Error: Cannot cd into ${DEPLOY_TOOLS_DIR}"
+      exit 1
+    }
+
+    gcloud auth login
+
+    case "$env" in
+      dev)
+        ./scripts/sso/aws.sh dev
+        ;;
+      ops)
+        ./scripts/sso/aws.sh ops
+        ;;
+      prod)
+        ./scripts/sso/aws.sh prod
+        ;;
+      *)
+        echo "Unknown environment: $env"
+        echo "Usage: sso [dev|ops|prod]"
+        exit 1
+        ;;
+    esac
+  )
 }
 
 # Render all mermaid blocks in a markdown file.
