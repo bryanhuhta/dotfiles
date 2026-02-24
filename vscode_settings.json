@@ -21,7 +21,7 @@
     "**/.classpath": true,
     "**/.project": true,
     "**/.settings": true,
-    "**/.factorypath": true
+    "**/.factorypath": true,
   },
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
@@ -42,7 +42,7 @@
     "composability",
     "ingester",
     "ingesters",
-    "otel"
+    "otel",
   ],
 
   "gitlens.codeLens.enabled": false,
@@ -70,8 +70,8 @@
       "background": "#ff0000",
       "iconColour": "#ff0000",
       "opacity": 50,
-      "gutterIcon": true
-    }
+      "gutterIcon": true,
+    },
   },
   "todo-tree.general.tags": ["BUG", "HACK", "FIXME", "TODO", "DEBUG"],
 
@@ -79,7 +79,7 @@
   "[css]": {
     "editor.suggest.insertMode": "replace",
     "editor.tabSize": 2,
-    "gitlens.codeLens.scopes": ["document"]
+    "gitlens.codeLens.scopes": ["document"],
   },
   "[dart]": {
     "editor.formatOnSave": true,
@@ -90,89 +90,89 @@
     "editor.suggestSelection": "first",
     "editor.tabCompletion": "onlySnippets",
     "editor.wordBasedSuggestions": "off",
-    "editor.defaultFormatter": "Dart-Code.dart-code"
+    "editor.defaultFormatter": "Dart-Code.dart-code",
   },
   "[erb]": {
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
   },
   "[go]": {
     "editor.insertSpaces": false,
     "editor.defaultFormatter": "golang.go",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit"
+      "source.organizeImports": "explicit",
     },
-    "editor.suggest.snippetsPreventQuickSuggestions": false
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
   },
   "[html]": {
-    "editor.defaultFormatter": "vscode.html-language-features"
+    "editor.defaultFormatter": "vscode.html-language-features",
   },
   "[javascript]": {
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
   },
   "[json]": {
     "editor.tabSize": 2,
-    "editor.defaultFormatter": "vscode.json-language-features"
+    "editor.defaultFormatter": "vscode.json-language-features",
   },
   "[jsonc]": {
     "editor.quickSuggestions": {
-      "strings": true
+      "strings": true,
     },
     "editor.tabSize": 2,
-    "editor.suggest.insertMode": "replace"
+    "editor.suggest.insertMode": "replace",
   },
   "[log]": {
-    "editor.wordWrap": "off"
+    "editor.wordWrap": "off",
   },
   "[markdown]": {
     "editor.wordWrap": "on",
     "editor.quickSuggestions": {
       "comments": "off",
       "strings": "off",
-      "other": "off"
+      "other": "off",
     },
     // "files.trimTrailingWhitespace": false
     "rewrap.wrappingColumn": 80,
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
   },
   "[plaintext]": {
     "editor.unicodeHighlight.ambiguousCharacters": false,
     // "editor.wordWrap": "wordWrapColumn",
     "editor.wordWrapColumn": 80,
-    "rewrap.wrappingColumn": 80
+    "rewrap.wrappingColumn": 80,
   },
   "[python]": {
     "editor.defaultFormatter": "ms-python.python",
     "editor.formatOnSave": true,
-    "editor.formatOnType": true
+    "editor.formatOnType": true,
   },
   "[ruby]": {
     "editor.tabSize": 2,
-    "editor.rulers": [80, 120]
+    "editor.rulers": [80, 120],
   },
   "[rust]": {
     "editor.defaultFormatter": "rust-lang.rust-analyzer",
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
   },
   "[scss]": {
     "editor.suggest.insertMode": "replace",
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
   },
   "[shellscript]": {
     "editor.tabSize": 2,
-    "files.eol": "\n"
+    "files.eol": "\n",
   },
   "[sql]": {
-    "editor.wordWrap": "off"
+    "editor.wordWrap": "off",
   },
   "[typescript]": {
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
   },
   "[typescriptreact]": {
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
   },
   "[z]": {
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
   },
 
   // Random junk.
@@ -183,7 +183,7 @@
     "*": false,
     "plaintext": false,
     "markdown": false,
-    "scminput": false
+    "scminput": false,
   },
   "githubPullRequests.pullBranch": "never",
   "security.workspace.trust.untrustedFiles": "open",
@@ -192,5 +192,10 @@
   "git.openRepositoryInParentFolders": "never",
   "git.suggestSmartCommit": false,
   "editor.fontFamily": "JetBrains Mono, Menlo, Monaco, 'Courier New', monospace",
-  "update.showReleaseNotes": false
+  "update.showReleaseNotes": false,
+  "terminal.integrated.suggest.cdPath": "off",
+  "remote.autoForwardPortsSource": "hybrid",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "zig.zls.enabled": "off",
 }
