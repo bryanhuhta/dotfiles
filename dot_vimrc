@@ -39,6 +39,14 @@ nnoremap <silent> <C-E> :Lexplore<CR>
 " Toggle relative/absolute line numbers.
 nnoremap <leader>r :set relativenumber! number!<CR>
 
+" <C-j> to enter edit mode with indentation. Useful for going from
+"   {|}
+" to
+"   {
+"     |
+"   }
+nnoremap <C-j> i<CR><CR><Up><C-t>
+
 " Go
 let g:go_fmt_command = "goimports"
 
