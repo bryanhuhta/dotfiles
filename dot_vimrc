@@ -24,6 +24,8 @@ set tabstop=4
 set shiftwidth=4
 set expandtab
 
+set cinoptions=l1
+
 " Folding options.
 set foldmethod=syntax
 set nofoldenable
