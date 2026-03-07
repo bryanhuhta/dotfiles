@@ -298,4 +298,14 @@ function jpegify () {
   magick -format jpg "${file}" "${name}.jpg"
 }
 
+{{- else }}
+
+# pico-8 executable
+function pico8() {
+    (
+        cd /Applications/PICO-8.app/Contents/MacOS;
+        ./pico8 "$@"
+    )
+}
+
 {{- end }}
