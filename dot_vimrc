@@ -51,8 +51,6 @@ nnoremap <C-j> i<CR><CR><Up><C-t>
 
 " Go
 let g:go_fmt_command = "goimports"
-
 let g:go_auto_type_info = 1
 set updatetime=100
-
 let g:go_auto_sameids = 1
