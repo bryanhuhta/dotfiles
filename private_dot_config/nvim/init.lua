@@ -50,7 +50,7 @@ require("lazy").setup({
 vim.opt.ruler = true
 vim.opt.relativenumber = true
 vim.opt.updatetime = 100
-
+vim.opt.clipboard = "unnamedplus" -- :let @" to copy file name to clipboard
 -- Column rulers
 vim.opt.colorcolumn = "81,121"
 vim.api.nvim_set_hl(0, "ColorColumn", { ctermbg = 235, bg = "#262626" })
