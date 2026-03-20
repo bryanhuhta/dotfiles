@@ -36,6 +36,12 @@ require("lazy").setup({
   },
   { "tpope/vim-fugitive" },
   {
+    "nmac427/guess-indent.nvim",
+    config = function()
+      require("guess-indent").setup({})
+    end,
+  },
+  {
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     config = function()
