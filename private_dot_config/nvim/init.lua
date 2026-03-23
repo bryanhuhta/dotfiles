@@ -56,7 +56,7 @@ require("lazy").setup({
 vim.opt.ruler = true
 vim.opt.relativenumber = true
 vim.opt.updatetime = 100
-vim.opt.clipboard = "unnamedplus" -- :let @" to copy file name to clipboard
+vim.opt.clipboard = "unnamedplus"
 -- Column rulers
 vim.opt.colorcolumn = "81,121"
 vim.api.nvim_set_hl(0, "ColorColumn", { ctermbg = 235, bg = "#262626" })
@@ -94,6 +94,9 @@ vim.keymap.set("n", "<Leader>z", ":set spell!<CR>", { desc = "Toggle spell check
 vim.keymap.set("n", "<C-j>", "i<CR><CR><Up><C-t>", { desc = "Insert newline with indentation (e.g. expand braces)" })
 vim.keymap.set("n", "<leader>q", ":copen<CR>", { silent = true, desc = "Open quickfix list" })
 vim.keymap.set("v", "//", [[y/\V<C-R>=escape(@", '/\')<CR><CR>]], { desc = "Search for visual selection" })
+vim.keymap.set("n", "<leader>yp", function() vim.fn.setreg("+", vim.fn.expand("%")) end, { desc = "Copy relative file path to clipboard" })
+vim.keymap.set("n", "<leader>yP", function() vim.fn.setreg("+", vim.fn.expand("%:p")) end, { desc = "Copy absolute file path to clipboard" })
+vim.keymap.set("n", "<leader>yn", function() vim.fn.setreg("+", vim.fn.expand("%:t")) end, { desc = "Copy file name to clipboard" })
 
 -- vim-go
 vim.g.go_fmt_command = "goimports"
