@@ -113,7 +113,8 @@ vim.opt.grepprg = "ag --vimgrep"
 vim.opt.grepformat = "%f:%l:%c:%m"
 
 -- Keymaps
-vim.keymap.set("n", "<C-E>", ":Lexplore<CR>", { silent = true, desc = "Toggle file explorer" })
+vim.keymap.set("n", "<C-E>", ":Lexplore %:h<CR>", { silent = true, desc = "Toggle file explorer (buffer dir)" })
+vim.keymap.set("n", "<C-S-E>", ":Lexplore<CR>", { silent = true, desc = "Toggle file explorer (cwd)" })
 vim.keymap.set("n", "<leader>r", ":set relativenumber! number!<CR>", { desc = "Toggle relative/absolute line numbers" })
 vim.keymap.set("n", "<Leader>w", ":%s/\\s\\+$//e<CR>", { desc = "Trim trailing whitespace" })
 vim.keymap.set("v", "<Leader>W", "<Cmd>set textwidth=80<CR>gvgq", { desc = "Hard wrap selection to 80 columns" })
