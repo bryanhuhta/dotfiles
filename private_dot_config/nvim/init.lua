@@ -36,6 +36,13 @@ require("lazy").setup({
   },
   { "tpope/vim-fugitive" },
   {
+    "windwp/nvim-autopairs",
+    event = "InsertEnter",
+    config = function()
+      require("nvim-autopairs").setup({})
+    end,
+  },
+  {
     "nmac427/guess-indent.nvim",
     config = function()
       require("guess-indent").setup({})
@@ -90,7 +97,7 @@ vim.api.nvim_set_hl(0, "ColorColumn", { ctermbg = 235, bg = "#262626" })
 
 -- Display whitespace
 vim.opt.list = true
-vim.opt.listchars = { tab = ">-", trail = ".", multispace = "." }
+vim.opt.listchars = { tab = "» ", trail = "•", multispace = "•" }
 
 -- Indentation
 vim.opt.autoindent = true
@@ -125,6 +132,7 @@ vim.keymap.set("v", "//", [[y/\V<C-R>=escape(@", '/\')<CR><CR>]], { desc = "Sear
 vim.keymap.set("n", "<leader>yp", function() vim.fn.setreg("+", vim.fn.expand("%")) end, { desc = "Copy relative file path to clipboard" })
 vim.keymap.set("n", "<leader>yP", function() vim.fn.setreg("+", vim.fn.expand("%:p")) end, { desc = "Copy absolute file path to clipboard" })
 vim.keymap.set("n", "<leader>yn", function() vim.fn.setreg("+", vim.fn.expand("%:t")) end, { desc = "Copy file name to clipboard" })
+vim.keymap.set('n', '<leader>d', vim.diagnostic.open_float, { desc = 'show diagnostics' })
 
 -- vim-go
 vim.g.go_fmt_command = "goimports"
