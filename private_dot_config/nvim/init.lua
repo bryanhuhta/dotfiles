@@ -124,9 +124,35 @@ vim.keymap.set("n", "<C-E>", ":Lexplore %:h<CR>", { silent = true, desc = "Toggl
 vim.keymap.set("n", "<C-S-E>", ":Lexplore<CR>", { silent = true, desc = "Toggle file explorer (cwd)" })
 vim.keymap.set("n", "<leader>r", ":set relativenumber! number!<CR>", { desc = "Toggle relative/absolute line numbers" })
 vim.keymap.set("n", "<Leader>w", ":%s/\\s\\+$//e<CR>", { desc = "Trim trailing whitespace" })
-vim.keymap.set("v", "<Leader>W", "<Cmd>set textwidth=80<CR>gvgq", { desc = "Hard wrap selection to 80 columns" })
+
+local function reflow_selection()
+  local saved_tw = vim.bo.textwidth
+  local saved_fe = vim.bo.formatexpr
+  vim.bo.textwidth = 80
+  vim.bo.formatexpr = ""
+
+  local buf = vim.api.nvim_get_current_buf()
+  local end_line = vim.fn.line("'>")  -- 1-indexed
+
+  -- Insert a blank line after the selection as a paragraph boundary so gq
+  -- does not pull in the following line. Track it with an extmark so we can
+  -- find and remove it after reformatting regardless of how lines shift.
+  vim.fn.append(end_line, "")
+  local ns = vim.api.nvim_create_namespace("reflow_sentinel")
+  local mark_id = vim.api.nvim_buf_set_extmark(buf, ns, end_line, 0, {})
+
+  vim.cmd("normal! gvgq")
+
+  local pos = vim.api.nvim_buf_get_extmark_by_id(buf, ns, mark_id, {})
+  vim.api.nvim_buf_set_lines(buf, pos[1], pos[1] + 1, false, {})
+  vim.api.nvim_buf_del_extmark(buf, ns, mark_id)
+
+  vim.bo.textwidth = saved_tw
+  vim.bo.formatexpr = saved_fe
+end
+vim.keymap.set("v", "<Leader>W", reflow_selection, { desc = "Hard wrap selection to 80 columns" })
+
 vim.keymap.set("n", "<Leader>z", ":set spell!<CR>", { desc = "Toggle spell checking" })
-vim.keymap.set("n", "<C-j>", "i<CR><CR><Up><C-t>", { desc = "Insert newline with indentation (e.g. expand braces)" })
 vim.keymap.set("n", "<leader>q", ":copen<CR>", { silent = true, desc = "Open quickfix list" })
 vim.keymap.set("v", "//", [[y/\V<C-R>=escape(@", '/\')<CR><CR>]], { desc = "Search for visual selection" })
 vim.keymap.set("n", "<leader>yp", function() vim.fn.setreg("+", vim.fn.expand("%")) end, { desc = "Copy relative file path to clipboard" })
