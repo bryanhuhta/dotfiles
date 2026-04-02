@@ -1,0 +1,30 @@
+# This is Git's per-user configuration file.
+[user]
+	name = bryanhuhta
+	email = bryan.huhta@grafana.com
+[pull]
+	rebase = false
+[core]
+	excludesfile = /Users/bryan/.gitignore_global
+[commit]
+	template = /Users/bryan/.stCommitMsg
+[alias]
+	graph = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)' --all
+	graph2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)'
+	tagcommit = rev-list -n 1
+[init]
+	defaultBranch = main
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[push]
+	default = simple
+	autoSetupRemote = true
+[branch]
+	autoSetupRemote = always
+[credential]
+	helper = manager-core
+[url "ssh://git@github.com/"]
+    insteadOf = https://github.com/
