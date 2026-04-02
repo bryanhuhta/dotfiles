@@ -45,7 +45,19 @@ function ppath() {
   echo -e ${PATH//:/\\n}
 }
 
-{{- if or (eq .chezmoi.hostname "Bryans-MacBook-Pro") (eq .chezmoi.hostname "Mac") }}
+{{- if or (eq .profile "personal") (eq .profile "") }}
+
+# pico-8 executable
+function pico8() {
+    (
+        cd /Applications/PICO-8.app/Contents/MacOS;
+        ./pico8 "$@"
+    )
+}
+
+{{- end }}
+
+{{- if eq .profile "work" }}
 
 # Work laptop
 
@@ -296,16 +308,6 @@ function jpegify () {
   file="${1}"
   name=$(basename "${file}" ".webp")
   magick -format jpg "${file}" "${name}.jpg"
-}
-
-{{- else }}
-
-# pico-8 executable
-function pico8() {
-    (
-        cd /Applications/PICO-8.app/Contents/MacOS;
-        ./pico8 "$@"
-    )
 }
 
 {{- end }}
