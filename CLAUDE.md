@@ -4,6 +4,17 @@ This repository manages dotfiles using [chezmoi](https://www.chezmoi.io/). Read 
 
 ---
 
+## Neovim Version
+
+The target Neovim version is **0.12**. Commands and APIs from older versions may not apply. In particular:
+
+- `:LspLog` does not exist — use `:lua vim.cmd("edit " .. vim.lsp.get_log_path())` to open the LSP log file, or `:lua print(vim.lsp.get_log_path())` to find it
+- `:LspInfo` does not exist — use `:lua print(vim.inspect(vim.lsp.get_clients()))` or `:checkhealth lsp`
+- LSP is configured via `vim.lsp.config()` / `vim.lsp.enable()` (0.11+ API), not `require("lspconfig")`
+- Always suggest commands and APIs that are valid in Neovim 0.12
+
+---
+
 ## Absolute Rules
 
 **Never do any of the following:**

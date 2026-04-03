@@ -1,3 +1,5 @@
+require("theme")
+
 -- Bootstrap lazy.nvim (plugin manager)
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
@@ -12,11 +14,6 @@ vim.opt.rtp:prepend(lazypath)
 
 -- Plugins
 require("lazy").setup({
-  {
-    "fatih/vim-go",
-    build = ":GoUpdateBinaries",
-    ft = { "go" },
-  },
   {
     "ibhagwan/fzf-lua",
     config = function()
@@ -60,7 +57,6 @@ require("lazy").setup({
   },
 })
 
--- LSP
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(ev)
     local buf = ev.buf
@@ -68,7 +64,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     if client and client:supports_method("textDocument/completion") then
       vim.lsp.completion.enable(true, ev.data.client_id, buf, { autotrigger = true })
     end
-    local function map(mode, lhs, rhs, desc)
+local function map(mode, lhs, rhs, desc)
       vim.keymap.set(mode, lhs, rhs, { buffer = buf, desc = desc })
     end
     map("n", "gd",         vim.lsp.buf.definition,     "Go to definition")
@@ -98,6 +94,26 @@ vim.lsp.config("ts_ls", {
 })
 vim.lsp.enable("ts_ls")
 
+vim.lsp.config("gopls", {
+  cmd = { "gopls" },
+  filetypes = { "go", "gomod", "gowork" },
+  root_markers = { "go.work", "go.mod", ".git" },
+  capabilities = {
+    workspace = {
+      didChangeWatchedFiles = { dynamicRegistration = false },
+    },
+  },
+  settings = {
+    gopls = {
+      semanticTokens = true,
+      completeUnimported = true,
+      analyses = { unusedparams = true },
+      staticcheck = true,
+    },
+  },
+})
+vim.lsp.enable("gopls")
+
 -- Completion navigation
 vim.keymap.set("i", "<Tab>",   function() return vim.fn.pumvisible() == 1 and "<C-n>" or "<Tab>"   end, { expr = true })
 vim.keymap.set("i", "<S-Tab>", function() return vim.fn.pumvisible() == 1 and "<C-p>" or "<S-Tab>" end, { expr = true })
@@ -110,7 +126,6 @@ vim.opt.updatetime = 100
 vim.opt.clipboard = "unnamedplus"
 -- Column rulers
 vim.opt.colorcolumn = "81,121"
-vim.api.nvim_set_hl(0, "ColorColumn", { ctermbg = 235, bg = "#262626" })
 
 -- Display whitespace
 vim.opt.list = true
@@ -137,8 +152,8 @@ vim.opt.grepprg = "ag --vimgrep"
 vim.opt.grepformat = "%f:%l:%c:%m"
 
 -- Keymaps
-vim.keymap.set("n", "<C-E>", ":Lexplore %:h<CR>", { silent = true, desc = "Toggle file explorer (buffer dir)" })
-vim.keymap.set("n", "<C-S-E>", ":Lexplore<CR>", { silent = true, desc = "Toggle file explorer (cwd)" })
+vim.keymap.set("n", "<C-E>", ":Lexplore %:h<CR>:vertical resize 40<CR>", { silent = true, desc = "Toggle file explorer (buffer dir)" })
+vim.keymap.set("n", "<C-S-E>", ":Lexplore<CR>:vertical resize 40<CR>", { silent = true, desc = "Toggle file explorer (cwd)" })
 vim.keymap.set("n", "<leader>r", ":set relativenumber! number!<CR>", { desc = "Toggle relative/absolute line numbers" })
 vim.keymap.set("n", "<Leader>w", ":%s/\\s\\+$//e<CR>", { desc = "Trim trailing whitespace" })
 
@@ -177,7 +192,14 @@ vim.keymap.set("n", "<leader>yP", function() vim.fn.setreg("+", vim.fn.expand("%
 vim.keymap.set("n", "<leader>yn", function() vim.fn.setreg("+", vim.fn.expand("%:t")) end, { desc = "Copy file name to clipboard" })
 vim.keymap.set('n', '<leader>d', vim.diagnostic.open_float, { desc = 'show diagnostics' })
 
--- vim-go
-vim.g.go_fmt_command = "goimports"
-vim.g.go_auto_type_info = 1
-vim.g.go_auto_sameids = 1
+-- Start treesitter highlighting
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "go", "typescript", "typescriptreact", "lua" },
+  callback = function() vim.treesitter.start() end,
+})
+
+-- Format with goimports on save via gopls
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = "*.go",
+  callback = function() vim.lsp.buf.format({ async = false }) end,
+})
