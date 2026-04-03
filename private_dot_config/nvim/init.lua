@@ -64,6 +64,10 @@ require("lazy").setup({
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(ev)
     local buf = ev.buf
+    local client = vim.lsp.get_client_by_id(ev.data.client_id)
+    if client and client:supports_method("textDocument/completion") then
+      vim.lsp.completion.enable(true, ev.data.client_id, buf, { autotrigger = true })
+    end
     local function map(mode, lhs, rhs, desc)
       vim.keymap.set(mode, lhs, rhs, { buffer = buf, desc = desc })
     end
@@ -84,10 +88,22 @@ vim.lsp.config("ts_ls", {
   cmd = { "typescript-language-server", "--stdio" },
   filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
   root_markers = { "tsconfig.json", "jsconfig.json", "package.json", ".git" },
+  init_options = {
+    preferences = {
+      includeCompletionsForModuleExports = true,
+      includeCompletionsWithInsertText = true,
+      importModuleSpecifierPreference = "shortest",
+    },
+  },
 })
 vim.lsp.enable("ts_ls")
 
+-- Completion navigation
+vim.keymap.set("i", "<Tab>",   function() return vim.fn.pumvisible() == 1 and "<C-n>" or "<Tab>"   end, { expr = true })
+vim.keymap.set("i", "<S-Tab>", function() return vim.fn.pumvisible() == 1 and "<C-p>" or "<S-Tab>" end, { expr = true })
+
 -- General
+vim.opt.completeopt = { "menu", "menuone", "noinsert", "noselect" }
 vim.opt.ruler = true
 vim.opt.relativenumber = true
 vim.opt.updatetime = 100
