@@ -119,6 +119,7 @@ vim.keymap.set("i", "<Tab>",   function() return vim.fn.pumvisible() == 1 and "<
 vim.keymap.set("i", "<S-Tab>", function() return vim.fn.pumvisible() == 1 and "<C-p>" or "<S-Tab>" end, { expr = true })
 
 -- General
+vim.opt.termguicolors = true
 vim.opt.completeopt = { "menu", "menuone", "noinsert", "noselect" }
 vim.opt.ruler = true
 vim.opt.relativenumber = true
