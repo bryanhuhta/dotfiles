@@ -26,6 +26,7 @@ vim.opt.completeopt = { "menu", "menuone", "noinsert", "noselect" }
 vim.opt.ruler = true
 vim.opt.relativenumber = true
 vim.opt.updatetime = 100
+vim.opt.signcolumn = "yes"
 vim.opt.clipboard = "unnamedplus"
 -- Column rulers
 vim.opt.colorcolumn = "81,121"
@@ -95,10 +96,16 @@ vim.keymap.set("n", "<leader>yP", function() vim.fn.setreg("+", vim.fn.expand("%
 vim.keymap.set("n", "<leader>yn", function() vim.fn.setreg("+", vim.fn.expand("%:t")) end, { desc = "Copy file name to clipboard" })
 vim.keymap.set('n', '<leader>d', vim.diagnostic.open_float, { desc = 'show diagnostics' })
 
+-- Auto-open quickfix after :grep
+vim.api.nvim_create_autocmd("QuickFixCmdPost", {
+  pattern = { "grep", "vimgrep" },
+  callback = function() vim.cmd("copen") end,
+})
+
 -- Start treesitter highlighting
 vim.api.nvim_create_autocmd("FileType", {
   pattern = { "go", "typescript", "typescriptreact", "lua" },
-  callback = function() vim.treesitter.start() end,
+  callback = function() pcall(vim.treesitter.start) end,
 })
 
 -- Format with goimports on save via gopls
