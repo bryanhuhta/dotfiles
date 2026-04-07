@@ -24,6 +24,7 @@ require("lsp")
 vim.opt.termguicolors = true
 vim.opt.completeopt = { "menu", "menuone", "noinsert", "noselect" }
 vim.opt.ruler = true
+vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.updatetime = 100
 vim.opt.signcolumn = "yes"
@@ -58,7 +59,7 @@ vim.opt.grepformat = "%f:%l:%c:%m"
 -- Keymaps
 vim.keymap.set("n", "<C-E>", ":Lexplore %:h<CR>:vertical resize 40<CR>", { silent = true, desc = "Toggle file explorer (buffer dir)" })
 vim.keymap.set("n", "<C-S-E>", ":Lexplore<CR>:vertical resize 40<CR>", { silent = true, desc = "Toggle file explorer (cwd)" })
-vim.keymap.set("n", "<leader>r", ":set relativenumber! number!<CR>", { desc = "Toggle relative/absolute line numbers" })
+vim.keymap.set("n", "<leader>r", ":set relativenumber!<CR>", { desc = "Toggle relative line numbers" })
 vim.keymap.set("n", "<Leader>w", ":%s/\\s\\+$//e<CR>", { desc = "Trim trailing whitespace" })
 
 local function reflow_selection()
@@ -104,8 +105,17 @@ vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 
 -- Start treesitter highlighting
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "go", "typescript", "typescriptreact", "lua" },
+  pattern = { "go", "typescript", "typescriptreact", "lua", "markdown" },
   callback = function() pcall(vim.treesitter.start) end,
+})
+
+-- Treesitter-based folding for markdown
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "markdown",
+  callback = function()
+    vim.opt_local.foldmethod = "expr"
+    vim.opt_local.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+  end,
 })
 
 -- Format with goimports on save via gopls
