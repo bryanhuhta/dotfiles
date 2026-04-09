@@ -96,6 +96,8 @@ vim.keymap.set("n", "<leader>yp", function() vim.fn.setreg("+", vim.fn.expand("%
 vim.keymap.set("n", "<leader>yP", function() vim.fn.setreg("+", vim.fn.expand("%:p")) end, { desc = "Copy absolute file path to clipboard" })
 vim.keymap.set("n", "<leader>yn", function() vim.fn.setreg("+", vim.fn.expand("%:t")) end, { desc = "Copy file name to clipboard" })
 vim.keymap.set('n', '<leader>d', vim.diagnostic.open_float, { desc = 'show diagnostics' })
+vim.keymap.set("n", "<leader><Tab>", ":bnext<CR>", { silent = true, desc = "Next buffer" })
+vim.keymap.set("n", "<leader><S-Tab>", ":bprev<CR>", { silent = true, desc = "Previous buffer" })
 
 -- Auto-open quickfix after :grep
 vim.api.nvim_create_autocmd("QuickFixCmdPost", {
