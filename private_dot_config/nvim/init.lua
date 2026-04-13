@@ -34,7 +34,7 @@ vim.opt.colorcolumn = "81,121"
 
 -- Display whitespace
 vim.opt.list = true
-vim.opt.listchars = { tab = "» ", trail = "•", multispace = "•" }
+vim.opt.listchars = { tab = "» ", trail = "·", multispace = "·" }
 
 -- Indentation
 vim.opt.autoindent = true
