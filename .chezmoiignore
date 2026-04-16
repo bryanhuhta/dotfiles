@@ -1,6 +1,8 @@
 CLAUDE.md
 .claude/
 
+Dockerfile
+
 README.md
 
 vscode_settings.json

@@ -51,6 +51,36 @@ function ppath() {
   echo -e ${PATH//:/\\n}
 }
 
+# Run claude in a sandboxed readonly Docker container.
+function roclaude() {
+  local image="claude-sandbox"
+  local dockerfile="$(chezmoi source-path)/Dockerfile"
+  local force=false
+
+  if [[ "$1" == "-f" ]]; then
+    force=true
+    shift
+  fi
+
+  if [[ ! -f "$dockerfile" ]]; then
+    echo "Error: Dockerfile not found at $dockerfile"
+    return 1
+  fi
+
+  if $force; then
+    docker rmi -f "$image" &>/dev/null
+  fi
+
+  if ! docker image inspect "$image" &>/dev/null; then
+    docker build -t "$image" -f "$dockerfile" "$(dirname "$dockerfile")"
+  fi
+
+  docker run --rm -it \
+    -v "${HOME}/.claude/.credentials.json:/home/claude/.claude/.credentials.json:ro" \
+    -v "$(pwd):/workspace:ro" \
+    "$image" "$@"
+}
+
 {{- if or (eq .profile "personal") (eq .profile "") }}
 
 # pico-8 executable
