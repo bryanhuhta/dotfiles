@@ -95,6 +95,7 @@ vim.keymap.set("v", "//", [[y/\V<C-R>=escape(@", '/\')<CR><CR>]], { desc = "Sear
 vim.keymap.set("n", "<leader>yp", function() vim.fn.setreg("+", vim.fn.expand("%")) end, { desc = "Copy relative file path to clipboard" })
 vim.keymap.set("n", "<leader>yP", function() vim.fn.setreg("+", vim.fn.expand("%:p")) end, { desc = "Copy absolute file path to clipboard" })
 vim.keymap.set("n", "<leader>yn", function() vim.fn.setreg("+", vim.fn.expand("%:t")) end, { desc = "Copy file name to clipboard" })
+vim.keymap.set("n", "<leader>nf", ":e %:h/", { desc = "New file in current directory" })
 vim.keymap.set('n', '<leader>d', vim.diagnostic.open_float, { desc = 'show diagnostics' })
 vim.keymap.set("n", "<leader><Tab>", ":bnext<CR>", { silent = true, desc = "Next buffer" })
 vim.keymap.set("n", "<leader><S-Tab>", ":bprev<CR>", { silent = true, desc = "Previous buffer" })
