@@ -305,6 +305,16 @@ function gifify {
   magick -format gif "${file}" "${name}.gif"
 }
 
+function movtomp4 {
+  local input="${1}"
+  if [[ -z "$input" ]]; then
+    echo "Usage: movtomp4 <input.mov>"
+    return 1
+  fi
+  local output="${input:r}.mp4"
+  ffmpeg -i "$input" -vcodec libx264 -crf 28 -preset slow -acodec aac -b:a 128k "$output"
+}
+
 function slackify {
   infile="${1}"
   files=()
