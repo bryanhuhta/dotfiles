@@ -1,0 +1,16 @@
+#!/bin/bash
+## Launch the PICO-8 fantasy console.
+##
+## Usage: pico8 [-h] [args...]
+##   -h    Print this help message
+##
+## Any additional arguments are passed through to the PICO-8 executable.
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed 's/^## \?//'
+  exit 0
+fi
+
+/Applications/PICO-8.app/Contents/MacOS/pico8 "$@"

@@ -1,0 +1,43 @@
+#!/bin/bash
+## Run Claude in a sandboxed read-only Docker container.
+##
+## Builds the Docker image from the Dockerfile in the chezmoi source
+## directory if it doesn't already exist.
+##
+## Usage: roclaude [-h] [-f] [args...]
+##   -h    Print this help message
+##   -f    Force rebuild the Docker image before running
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed 's/^## \?//'
+  exit 0
+fi
+
+image="claude-sandbox"
+dockerfile="$(chezmoi source-path)/Dockerfile"
+force=false
+
+if [[ "${1:-}" == "-f" ]]; then
+  force=true
+  shift
+fi
+
+if [[ ! -f "$dockerfile" ]]; then
+  echo "Error: Dockerfile not found at $dockerfile"
+  exit 1
+fi
+
+if $force; then
+  docker rmi -f "$image" &>/dev/null
+fi
+
+if ! docker image inspect "$image" &>/dev/null; then
+  docker build -t "$image" -f "$dockerfile" "$(dirname "$dockerfile")"
+fi
+
+docker run --rm -it \
+  -v "${HOME}/.claude/.credentials.json:/home/claude/.claude/.credentials.json:ro" \
+  -v "$(pwd):/workspace:ro" \
+  "$image" "$@"

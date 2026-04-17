@@ -1,0 +1,24 @@
+#!/bin/bash
+## Convert a .mov file to .mp4 using ffmpeg.
+##
+## Output is written to the same directory as the input with
+## a .mp4 extension. Uses libx264 video and AAC audio encoding.
+##
+## Usage: movtomp4 [-h] <input.mov>
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed 's/^## \?//'
+  exit 0
+fi
+
+input="${1:-}"
+if [[ -z "$input" ]]; then
+  echo "Usage: movtomp4 <input.mov>"
+  exit 1
+fi
+
+output="${input%.*}.mp4"
+ffmpeg -i "$input" -vcodec libx264 -crf 28 -preset slow -acodec aac -b:a 128k "$output"

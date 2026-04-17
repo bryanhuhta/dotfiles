@@ -1,0 +1,14 @@
+#!/bin/bash
+## Pretty-print PATH entries, one per line.
+##
+## Usage: ppath [-h]
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed 's/^## \?//'
+  exit 0
+fi
+
+echo -e "${PATH//:/\\n}"

@@ -1,0 +1,24 @@
+#!/bin/bash
+## Convert a .webp image to .jpg using ImageMagick.
+##
+## Output is written to the same directory as the input
+## with a .jpg extension.
+##
+## Usage: jpegify [-h] <file.webp>
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed 's/^## \?//'
+  exit 0
+fi
+
+if [[ -z "${1:-}" ]]; then
+  echo "Usage: jpegify <file.webp>"
+  exit 1
+fi
+
+file="$1"
+name=$(basename "$file" ".webp")
+magick -format jpg "$file" "${name}.jpg"

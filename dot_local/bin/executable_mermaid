@@ -1,0 +1,62 @@
+#!/bin/bash
+## Render all mermaid blocks in a markdown file using Docker.
+##
+## Uses the minlag/mermaid-cli Docker image to render diagrams.
+## Output is written alongside the input file (or to a directory
+## specified with -d).
+##
+## Usage: mermaid [-h] [-d output_dir] <file>
+##   -h              Print this help message
+##   -d output_dir   Write output to this directory instead of
+##                   the input file's directory
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed 's/^## \?//'
+  exit 0
+fi
+
+output_dir=""
+input=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -d|--dir)
+      output_dir="$2"
+      shift 2
+      ;;
+    *)
+      input="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$input" ]]; then
+  echo "Usage: mermaid [-d output_dir] <file>"
+  exit 1
+fi
+
+if [[ ! -f "$input" ]]; then
+  echo "Error: '$input' not found."
+  exit 1
+fi
+
+dir=$(dirname "$input")
+filename=$(basename "$input")
+base="${filename%.*}"
+ext="${filename##*.}"
+
+if [[ -z "$output_dir" ]]; then
+  output_dir="$dir"
+fi
+
+mkdir -p "$output_dir"
+output="${output_dir}/${base}.render.${ext}"
+
+docker run --rm -u "$(id -u)":"$(id -g)" \
+  -v "${PWD}:/data" \
+  minlag/mermaid-cli \
+  -i "$input" \
+  -o "$output"

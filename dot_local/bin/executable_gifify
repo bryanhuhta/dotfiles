@@ -1,0 +1,24 @@
+#!/bin/bash
+## Convert a .webp image to .gif using ImageMagick.
+##
+## Output is written to the same directory as the input
+## with a .gif extension.
+##
+## Usage: gifify [-h] <file.webp>
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed 's/^## \?//'
+  exit 0
+fi
+
+if [[ -z "${1:-}" ]]; then
+  echo "Usage: gifify <file.webp>"
+  exit 1
+fi
+
+file="$1"
+name=$(basename "$file" ".webp")
+magick -format gif "$file" "${name}.gif"

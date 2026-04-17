@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(ls:*)",
-      "WebFetch(domain:www.chezmoi.io)"
+      "WebFetch(domain:www.chezmoi.io)",
+      "Bash(chezmoi ignored:*)",
+      "Bash(chezmoi managed:*)",
+      "Bash(chezmoi diff:*)"
     ]
   }
 }

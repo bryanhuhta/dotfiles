@@ -1,9 +1,16 @@
-CLAUDE.md
-.claude/
-
-Dockerfile
-
 README.md
-
-vscode_settings.json
-zed_settings.json
+{{- if ne .profile "personal" }}
+# personal-only scripts
+.local/bin/pico8
+{{- end }}
+{{- if ne .profile "work" }}
+# work-only scripts
+.local/bin/cursor
+.local/bin/sso
+.local/bin/mermaid
+.local/bin/ts2date
+.local/bin/gifify
+.local/bin/movtomp4
+.local/bin/slackify
+.local/bin/jpegify
+{{- end }}

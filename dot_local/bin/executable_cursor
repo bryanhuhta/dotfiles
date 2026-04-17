@@ -1,0 +1,14 @@
+#!/bin/bash
+## Open files or directories with the Cursor editor.
+##
+## Usage: cursor [-h] [files...]
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed 's/^## \?//'
+  exit 0
+fi
+
+/Applications/Cursor.app/Contents/MacOS/Cursor "$@"
