@@ -11,7 +11,7 @@
 set -euo pipefail
 
 if [[ "${1:-}" == "-h" ]]; then
-  grep '^##' "$0" | sed 's/^## \?//'
+  grep '^##' "$0" | sed -E 's/^## ?//'
   exit 0
 fi
 

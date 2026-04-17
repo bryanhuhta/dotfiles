@@ -191,6 +191,51 @@ Always validate before telling the user to apply.
 
 ---
 
+## Utility Scripts
+
+Utility scripts live in `dot_local/bin/` and are installed to `~/.local/bin/`. When adding a new utility script, **always ask the user** whether it is for personal use, work use, or both — this determines whether the script needs profile gating.
+
+### File naming
+
+The source file must be named `executable_<name>` so chezmoi sets the executable bit. Example: `dot_local/bin/executable_myscript` → `~/.local/bin/myscript`.
+
+### Required structure
+
+Every script must follow this pattern:
+
+```bash
+#!/bin/bash
+## Short description of what the script does.
+##
+## More detail if needed.
+##
+## Usage: scriptname [-h] [other options...]
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+# ... rest of script
+```
+
+Key requirements:
+
+- **`-h` flag is mandatory** — every script must support `-h` to print its help message
+- **Help text is embedded as `##` comments** at the top of the file, immediately after the shebang
+- **Help extraction** uses `grep '^##' "$0" | sed -E 's/^## ?//'` — the `-E` flag is required for macOS compatibility
+- **`set -euo pipefail`** must appear before any logic
+- The `-h` check must come before all other argument parsing
+
+### Profile-specific scripts
+
+If a script is only for one profile, ask the user whether to gate it with a chezmoi template or simply not install it on other machines. For template gating, the file would need a `.tmpl` suffix and conditional rendering.
+
+---
+
 ## Key Commands Reference
 
 | Command                           | Description                                               |

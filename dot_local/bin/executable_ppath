@@ -1,13 +1,15 @@
 #!/bin/bash
 ## Pretty-print PATH entries, one per line.
 ##
+## Splits $PATH on colons and prints each directory on its own line.
+##
 ## Usage: ppath [-h]
 ##   -h    Print this help message
 
 set -euo pipefail
 
 if [[ "${1:-}" == "-h" ]]; then
-  grep '^##' "$0" | sed 's/^## \?//'
+  grep '^##' "$0" | sed -E 's/^## ?//'
   exit 0
 fi
 

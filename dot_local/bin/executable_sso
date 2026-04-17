@@ -2,7 +2,7 @@
 ## Authenticate via gcloud and AWS SSO for a given environment.
 ##
 ## Checks if gcloud auth is active before prompting login. Use -f
-## to force re-authentication.
+## to force re-authentication. Requires DEPLOY_TOOLS_DIR to be set.
 ##
 ## Usage: sso [-h] [-f|--force] [dev|ops|prod]
 ##   -h, --help     Print this help message
@@ -10,13 +10,11 @@
 ##   dev            Authenticate to the dev environment (default)
 ##   ops            Authenticate to the ops environment
 ##   prod           Authenticate to the prod environment
-##
-## Requires DEPLOY_TOOLS_DIR to be set.
 
 set -euo pipefail
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  grep '^##' "$0" | sed 's/^## \?//'
+  grep '^##' "$0" | sed -E 's/^## ?//'
   exit 0
 fi
 
