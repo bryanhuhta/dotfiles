@@ -42,7 +42,7 @@ if $force; then
 fi
 
 if ! docker image inspect "$image" &>/dev/null; then
-  docker build -t "$image" -f "$dockerfile" "$(dirname "$dockerfile")"
+  docker build -t "$image" -f "$dockerfile" "$(chezmoi source-path)"
 fi
 
 api_key=$(security find-generic-password -s "Claude Code" -w 2>/dev/null) || true

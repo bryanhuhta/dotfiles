@@ -1,0 +1,12 @@
+{
+  "hasCompletedOnboarding": true,
+  "numStartups": 1,
+  "autoUpdates": false,
+  "installMethod": "global",
+  "projects": {
+    "/workspace": {
+      "hasTrustDialogAccepted": true,
+      "allowedTools": []
+    }
+  }
+}

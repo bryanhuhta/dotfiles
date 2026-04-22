@@ -1,5 +1,6 @@
 {
   "theme": "dark",
+  "skipDangerousModePermissionPrompt": true,
   "permissions": {
     "allow": [
       "Bash(*)",
