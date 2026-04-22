@@ -7,7 +7,8 @@
       "Bash(chezmoi managed:*)",
       "Bash(chezmoi diff:*)",
       "Bash(chezmoi status:*)",
-      "Bash(chezmoi cat:*)"
+      "Bash(chezmoi cat:*)",
+      "Bash(chezmoi data:*)"
     ]
   }
 }

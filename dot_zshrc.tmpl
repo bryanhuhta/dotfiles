@@ -47,6 +47,11 @@ alias e="$EDITOR"
 # Utility scripts
 export PATH="$HOME/.local/bin:$PATH"
 
+# rbenv must be after all PATH modifications so shims take precedence.
+if command -v rbenv &>/dev/null; then
+  eval "$(rbenv init - --no-rehash zsh)"
+fi
+
 {{- if eq .profile "work" }}
 
 # Work laptop
@@ -92,9 +97,6 @@ export PATH=$PATH:"${HOME}/grafana/pyroscope"
 
 # Add google cloud sdk to path.
 export PATH=$PATH:/opt/homebrew/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin
-
-# Ruby
-export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 
 # jenv
 export PATH="$HOME/.jenv/shims:$PATH"
