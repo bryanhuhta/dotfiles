@@ -7,9 +7,10 @@
 ## Authenticates by reading the Claude Code credential from the macOS
 ## Keychain and passing it as ANTHROPIC_API_KEY to the container.
 ##
-## Usage: sandbox [-h] [-f] [args...]
+## Usage: sandbox [-h] [-f] [-w] [args...]
 ##   -h    Print this help message
 ##   -f    Force rebuild the Docker image before running
+##   -w    Mount the working directory as writable (default: read-only)
 
 set -euo pipefail
 
@@ -21,11 +22,15 @@ fi
 image="claude-sandbox"
 dockerfile="$(chezmoi source-path)/Dockerfile"
 force=false
+writable=false
 
-if [[ "${1:-}" == "-f" ]]; then
-  force=true
-  shift
-fi
+while [[ "${1:-}" == -* ]]; do
+  case "${1:-}" in
+    -f) force=true; shift ;;
+    -w) writable=true; shift ;;
+    *) break ;;
+  esac
+done
 
 if [[ ! -f "$dockerfile" ]]; then
   echo "Error: Dockerfile not found at $dockerfile"
@@ -47,7 +52,12 @@ if [[ -z "${api_key:-}" ]]; then
   exit 1
 fi
 
+mount_opts="ro"
+if $writable; then
+  mount_opts="rw"
+fi
+
 docker run --rm -it \
   -e "ANTHROPIC_API_KEY=${api_key}" \
-  -v "$(pwd):/workspace:ro" \
+  -v "$(pwd):/workspace:${mount_opts}" \
   "$image" "$@"
