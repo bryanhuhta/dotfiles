@@ -7,7 +7,7 @@
 ## Authenticates by reading the Claude Code credential from the macOS
 ## Keychain and passing it as ANTHROPIC_API_KEY to the container.
 ##
-## Usage: roclaude [-h] [-f] [args...]
+## Usage: sandbox [-h] [-f] [args...]
 ##   -h    Print this help message
 ##   -f    Force rebuild the Docker image before running
 
