@@ -6,7 +6,8 @@ RUN apk add --no-cache \
   curl \
   git \
   jq \
-  make
+  make \
+  neovim
 
 # Go
 RUN apk add --no-cache go
@@ -41,6 +42,12 @@ COPY --chown=claude:claude claude-sandbox/claude-state.json /home/claude/.claude
 # Copy user-level Claude configurations
 COPY --chown=claude:claude claude-home/CLAUDE.md /home/claude/.claude/CLAUDE.md
 COPY --chown=claude:claude claude-home/skills/ /home/claude/.claude/skills/
+
+# Neovim configuration
+ENV EDITOR=nvim
+RUN mkdir -p /home/claude/.config/nvim
+COPY --chown=claude:claude private_dot_config/nvim/ /home/claude/.config/nvim/
+RUN nvim --headless "+Lazy! sync" +qa
 
 WORKDIR /workspace
 
