@@ -20,7 +20,7 @@ if [[ "${1:-}" == "-h" ]]; then
 fi
 
 image="claude-sandbox"
-dockerfile="$(chezmoi source-path)/Dockerfile"
+dockerfile="$(chezmoi source-path)/claude-sandbox/Dockerfile"
 force=false
 writable=false
 
