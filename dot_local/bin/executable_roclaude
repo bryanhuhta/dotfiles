@@ -4,6 +4,9 @@
 ## Builds the Docker image from the Dockerfile in the chezmoi source
 ## directory if it doesn't already exist.
 ##
+## Authenticates by reading the Claude Code credential from the macOS
+## Keychain and passing it as ANTHROPIC_API_KEY to the container.
+##
 ## Usage: roclaude [-h] [-f] [args...]
 ##   -h    Print this help message
 ##   -f    Force rebuild the Docker image before running
@@ -37,7 +40,14 @@ if ! docker image inspect "$image" &>/dev/null; then
   docker build -t "$image" -f "$dockerfile" "$(dirname "$dockerfile")"
 fi
 
+api_key=$(security find-generic-password -s "Claude Code" -w 2>/dev/null) || true
+if [[ -z "${api_key:-}" ]]; then
+  echo "Error: could not read Claude Code credential from macOS Keychain"
+  echo "Run 'claude auth login' to authenticate first"
+  exit 1
+fi
+
 docker run --rm -it \
-  -v "${HOME}/.claude/.credentials.json:/home/claude/.claude/.credentials.json:ro" \
+  -e "ANTHROPIC_API_KEY=${api_key}" \
   -v "$(pwd):/workspace:ro" \
   "$image" "$@"

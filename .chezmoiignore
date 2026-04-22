@@ -1,8 +1,23 @@
+CLAUDE.md
 README.md
+
+# Claude sandbox
+claude-sandbox/
+
+# Symlink targets for ~/.claude (externally modified files)
+claude-home/
+
+# vscode
+vscode_settings.json
+
+# Zed
+zed_settings.json
+
 {{- if ne .profile "personal" }}
 # personal-only scripts
 .local/bin/pico8
 {{- end }}
+
 {{- if ne .profile "work" }}
 # work-only scripts
 .local/bin/cursor

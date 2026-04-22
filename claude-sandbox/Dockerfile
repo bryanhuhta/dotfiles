@@ -30,6 +30,17 @@ USER claude
 RUN curl -fsSL https://claude.ai/install.sh | bash
 ENV PATH="/home/claude/.local/bin:$PATH"
 
+# Disable auto-updater in container
+ENV DISABLE_AUTOUPDATER=1
+
+# Pre-configure Claude Code to skip interactive onboarding prompts
+RUN mkdir -p /home/claude/.claude
+COPY --chown=claude:claude docker/claude-settings.json /home/claude/.claude/settings.json
+
+# Copy user-level Claude configurations
+COPY --chown=claude:claude claude-home/CLAUDE.md /home/claude/.claude/CLAUDE.md
+COPY --chown=claude:claude claude-home/skills/ /home/claude/.claude/skills/
+
 WORKDIR /workspace
 
 ENTRYPOINT ["claude", "--dangerously-skip-permissions"]
