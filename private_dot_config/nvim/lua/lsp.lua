@@ -99,6 +99,21 @@ vim.lsp.config("ts_ls", {
 })
 vim.lsp.enable("ts_ls")
 
+vim.lsp.config("clangd", {
+  cmd = { "clangd", "--background-index", "--clang-tidy", "--header-insertion=iwyu" },
+  filetypes = { "c", "cpp", "objc", "objcpp" },
+  root_markers = {
+    ".clangd",
+    ".clang-tidy",
+    ".clang-format",
+    "compile_commands.json",
+    "compile_flags.txt",
+    "configure.ac",
+    ".git",
+  },
+})
+vim.lsp.enable("clangd")
+
 vim.lsp.config("gopls", {
   cmd = { "gopls" },
   filetypes = { "go", "gomod", "gowork" },

@@ -108,7 +108,7 @@ vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 
 -- Start treesitter highlighting
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "go", "typescript", "typescriptreact", "lua", "markdown" },
+  pattern = { "go", "typescript", "typescriptreact", "lua", "markdown", "c", "cpp" },
   callback = function() pcall(vim.treesitter.start) end,
 })
 
