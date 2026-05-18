@@ -1,0 +1,65 @@
+#!/bin/bash
+## Run yt-dlp (the maintained youtube-dl fork) in a Docker container.
+##
+## Builds the Docker image from youtube-dl/Dockerfile in the chezmoi
+## source directory if it does not already exist. Mounts the current
+## working directory as /downloads so files saved by yt-dlp land here.
+##
+## Wrapper flags must come before the `--` separator. Everything after
+## `--` is passed directly to yt-dlp, which avoids any collision between
+## wrapper flags and yt-dlp options.
+##
+## Usage: youtube-dl [-h] [-f] [-- yt-dlp args...]
+##   -h    Print this help message
+##   -f    Force rebuild the Docker image before running
+##
+## Example: youtube-dl -f -- -f bestaudio https://...
+##   (wrapper -f rebuilds the image; yt-dlp -f selects the format)
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+image="youtube-dl"
+context="$(chezmoi source-path)/youtube-dl"
+dockerfile="${context}/Dockerfile"
+rebuild=false
+
+while [[ $# -gt 0 ]]; do
+  case "${1}" in
+    -f) rebuild=true; shift ;;
+    --) shift; break ;;
+    *) echo "Error: unknown wrapper argument '$1'" >&2
+       echo "Use '--' to pass arguments through to yt-dlp." >&2
+       echo "Example: youtube-dl -- $1" >&2
+       exit 1 ;;
+  esac
+done
+
+if [[ ! -f "$dockerfile" ]]; then
+  echo "Error: Dockerfile not found at $dockerfile"
+  exit 1
+fi
+
+if $rebuild; then
+  docker rmi -f "$image" &>/dev/null || true
+fi
+
+if ! docker image inspect "$image" &>/dev/null; then
+  docker build -t "$image" -f "$dockerfile" "$context"
+fi
+
+tty_flags=()
+if [[ -t 0 && -t 1 ]]; then
+  tty_flags=(-it)
+fi
+
+docker run --rm "${tty_flags[@]}" \
+  --init \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp \
+  -v "$(pwd):/downloads" \
+  "$image" "$@"
