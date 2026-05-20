@@ -140,3 +140,17 @@ vim.lsp.config("sourcekit", {
   root_markers = { "Package.swift", "*.xcodeproj", "*.xcworkspace", ".git" },
 })
 vim.lsp.enable("sourcekit")
+
+vim.lsp.config("rust_analyzer", {
+  cmd = { "rust-analyzer" },
+  filetypes = { "rust" },
+  root_markers = { "Cargo.toml", "rust-project.json", ".git" },
+  settings = {
+    ["rust-analyzer"] = {
+      cargo = { allFeatures = true },
+      check = { command = "clippy" },
+      procMacro = { enable = true },
+    },
+  },
+})
+vim.lsp.enable("rust_analyzer")
