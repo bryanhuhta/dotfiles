@@ -133,3 +133,10 @@ vim.lsp.config("gopls", {
   },
 })
 vim.lsp.enable("gopls")
+
+vim.lsp.config("sourcekit", {
+  cmd = { "xcrun", "sourcekit-lsp" },
+  filetypes = { "swift" },
+  root_markers = { "Package.swift", "*.xcodeproj", "*.xcworkspace", ".git" },
+})
+vim.lsp.enable("sourcekit")
