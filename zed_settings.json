@@ -7,8 +7,15 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "collaboration_panel": {
+    "dock": "left"
+  },
+  "git_panel": {
+    "dock": "left"
+  },
   "show_edit_predictions": false,
   "agent": {
+    "dock": "right",
     "default_model": {
       "provider": "anthropic",
       "model": "claude-sonnet-4-5-latest"
