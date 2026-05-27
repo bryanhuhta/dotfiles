@@ -2,12 +2,18 @@
 [user]
 	name = {{ .git.name }}
 	email = {{ .git.email }}
+{{- if hasKey .git "signingkey" }}
+	signingkey = {{ .git.signingkey }}
+{{- end }}
 [pull]
 	rebase = false
 [core]
 	excludesfile = /Users/bryan/.gitignore_global
 [commit]
 	template = /Users/bryan/.stCommitMsg
+{{- if hasKey .git "signingkey" }}
+	gpgsign = true
+{{- end }}
 [alias]
 	graph = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)' --all
 	graph2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)'
@@ -27,4 +33,14 @@
 [credential]
 	helper = manager-core
 [url "ssh://git@github.com/"]
-    insteadOf = https://github.com/
+	insteadOf = https://github.com/
+{{- if hasKey .git "signingkey" }}
+[tag]
+	gpgsign = true
+[gpg]
+	format = ssh
+[gpg "ssh"]
+	program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
+	allowedSignersFile = ~/.ssh/allowed_signers
+{{- end }}
+

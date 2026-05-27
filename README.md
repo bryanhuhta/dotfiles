@@ -17,8 +17,9 @@ machine-specific values:
     email = "you@example.com"
 ```
 
-| Key          | Required | Default      | Description                         |
-|--------------|----------|--------------|-------------------------------------|
-| `profile`    | no       | `personal`   | dotfile profile                     |
-| `git.name`   | yes      | -            | git username                        |
-| `git.email`  | yes      | -            | git email                           |
+| Key               | Required | Default      | Description                                                    |
+|-------------------|----------|--------------|----------------------------------------------------------------|
+| `profile`         | no       | `personal`   | dotfile profile                                                |
+| `git.name`        | yes      | -            | git username                                                   |
+| `git.email`       | yes      | -            | git email                                                      |
+| `git.signingkey`  | no       | -            | SSH public key string for commit signing; enables signing when set |
