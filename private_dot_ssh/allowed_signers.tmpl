@@ -1,0 +1,3 @@
+{{- if hasKey .git "signingkey" -}}
+{{ .git.email }} {{ .git.signingkey }}
+{{ end -}}
