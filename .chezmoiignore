@@ -10,9 +10,6 @@ youtube-dl/
 # Symlink targets for ~/.claude (externally modified files)
 claude-home/
 
-# vscode
-vscode_settings.json
-
 # Zed
 zed_settings.json
 
