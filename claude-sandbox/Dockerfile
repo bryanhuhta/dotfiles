@@ -5,6 +5,7 @@ RUN apk add --no-cache \
   bash \
   curl \
   git \
+  github-cli \
   jq \
   make \
   neovim

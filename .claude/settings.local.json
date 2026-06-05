@@ -8,7 +8,11 @@
       "Bash(chezmoi diff:*)",
       "Bash(chezmoi status:*)",
       "Bash(chezmoi cat:*)",
-      "Bash(chezmoi data:*)"
+      "Bash(chezmoi data:*)",
+      "Bash(git -C /Users/bryan/.local/share/chezmoi log --diff-filter=D --name-only --pretty=format: -- '*roclaude*')",
+      "Bash(git -C /Users/bryan/.local/share/chezmoi log --oneline --all -- '*roclaude*' '*sandbox*' '*claude-sandbox*')",
+      "Bash(chezmoi add *)",
+      "Bash(chezmoi execute-template *)"
     ]
   }
 }
