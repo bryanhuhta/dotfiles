@@ -1,14 +1,19 @@
 #!/bin/bash
-## Render all mermaid blocks in a markdown file using Docker.
+## Render mermaid diagrams using Docker.
 ##
 ## Uses the minlag/mermaid-cli Docker image to render diagrams.
-## Output is written alongside the input file (or to a directory
-## specified with -d).
+## Accepts one or more markdown files (renders all mermaid code
+## blocks) or .mmd files (treated as raw mermaid scripts). Output
+## is written alongside each input file (or to a directory
+## specified with -d, shared by all inputs).
 ##
-## Usage: mermaid [-h] [-d output_dir] <file>
+## Markdown input writes <name>.render.md; .mmd input writes
+## <name>.render.svg.
+##
+## Usage: mermaid [-h] [-d output_dir] <file> [<file>...]
 ##   -h              Print this help message
 ##   -d output_dir   Write output to this directory instead of
-##                   the input file's directory
+##                   each input file's directory
 
 set -euo pipefail
 
@@ -18,7 +23,7 @@ if [[ "${1:-}" == "-h" ]]; then
 fi
 
 output_dir=""
-input=""
+inputs=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -27,36 +32,47 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
-      input="$1"
+      inputs+=("$1")
       shift
       ;;
   esac
 done
 
-if [[ -z "$input" ]]; then
-  echo "Usage: mermaid [-d output_dir] <file>"
+if [[ ${#inputs[@]} -eq 0 ]]; then
+  echo "Usage: mermaid [-d output_dir] <file> [<file>...]"
   exit 1
 fi
 
-if [[ ! -f "$input" ]]; then
-  echo "Error: '$input' not found."
-  exit 1
-fi
+for input in "${inputs[@]}"; do
+  if [[ ! -f "$input" ]]; then
+    echo "Error: '$input' not found."
+    exit 1
+  fi
+done
 
-dir=$(dirname "$input")
-filename=$(basename "$input")
-base="${filename%.*}"
-ext="${filename##*.}"
+for input in "${inputs[@]}"; do
+  dir=$(dirname "$input")
+  filename=$(basename "$input")
+  base="${filename%.*}"
+  ext="${filename##*.}"
 
-if [[ -z "$output_dir" ]]; then
-  output_dir="$dir"
-fi
+  if [[ -n "$output_dir" ]]; then
+    out_dir="$output_dir"
+  else
+    out_dir="$dir"
+  fi
 
-mkdir -p "$output_dir"
-output="${output_dir}/${base}.render.${ext}"
+  mkdir -p "$out_dir"
 
-docker run --rm -u "$(id -u)":"$(id -g)" \
-  -v "${PWD}:/data" \
-  minlag/mermaid-cli \
-  -i "$input" \
-  -o "$output"
+  if [[ "$ext" == "mmd" ]]; then
+    output="${out_dir}/${base}.render.svg"
+  else
+    output="${out_dir}/${base}.render.${ext}"
+  fi
+
+  docker run --rm -u "$(id -u)":"$(id -g)" \
+    -v "${PWD}:/data" \
+    minlag/mermaid-cli \
+    -i "$input" \
+    -o "$output"
+done
