@@ -20,7 +20,6 @@ zed_settings.json
 
 {{- if ne .profile "work" }}
 # work-only scripts
-.local/bin/cursor
 .local/bin/sso
 .local/bin/mermaid
 .local/bin/ts2date
