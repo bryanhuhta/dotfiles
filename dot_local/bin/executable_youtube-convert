@@ -1,0 +1,89 @@
+#!/bin/bash
+## Check a video file for codecs incompatible with macOS QuickTime
+## and re-encode in place if needed.
+##
+## Inspects the video and audio streams with ffprobe. If either codec
+## is in the known-incompatible blocklist, the file is re-encoded and
+## the original is replaced. Compatible streams are copied without
+## re-encoding. The original is only overwritten on success.
+##
+## Blocklisted video codecs: vp9, vp8, av1
+## Blocklisted audio codecs: opus, vorbis
+##
+## Usage: youtube-convert [-h] <input>
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+input="${1:-}"
+if [[ -z "$input" ]]; then
+  echo "Usage: youtube-convert <input>" >&2
+  exit 1
+fi
+
+if [[ ! -f "$input" ]]; then
+  echo "Error: file not found: $input" >&2
+  exit 1
+fi
+
+for cmd in ffmpeg ffprobe; do
+  if ! command -v "$cmd" >/dev/null; then
+    echo "Error: $cmd not found on PATH" >&2
+    exit 1
+  fi
+done
+
+probe_codec() {
+  ffprobe -v error -select_streams "$1" \
+    -show_entries stream=codec_name \
+    -of default=nokey=1:noprint_wrappers=1 "$input"
+}
+
+vcodec="$(probe_codec v:0)"
+acodec="$(probe_codec a:0)"
+
+video_args=(-c:v copy)
+audio_args=(-c:a copy)
+convert=false
+
+case "$vcodec" in
+  vp9|vp8|av1)
+    echo "Incompatible video codec: $vcodec -> libx264"
+    video_args=(-c:v libx264 -preset slow -crf 23 -pix_fmt yuv420p)
+    convert=true
+    ;;
+  "")
+    echo "Warning: no video stream detected" >&2
+    ;;
+esac
+
+case "$acodec" in
+  opus|vorbis)
+    echo "Incompatible audio codec: $acodec -> aac"
+    audio_args=(-c:a aac -b:a 192k)
+    convert=true
+    ;;
+esac
+
+if ! $convert; then
+  echo "Codecs are compatible with QuickTime. Nothing to do."
+  exit 0
+fi
+
+tmp="${input%.*}.converting.$$.mp4"
+trap 'rm -f "$tmp"' EXIT
+
+ffmpeg -nostdin -y -i "$input" \
+  "${video_args[@]}" \
+  "${audio_args[@]}" \
+  -movflags +faststart \
+  "$tmp"
+
+mv -f "$tmp" "$input"
+trap - EXIT
+echo "Converted in place: $input"
