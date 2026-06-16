@@ -7,6 +7,9 @@ claude-sandbox/
 # youtube-dl docker build context
 youtube-dl/
 
+# scan (trivy + grype) docker build context
+scan/
+
 # Symlink targets for ~/.claude (externally modified files)
 claude-home/
 
@@ -27,4 +30,5 @@ zed_settings.json
 .local/bin/movtomp4
 .local/bin/slackify
 .local/bin/jpegify
+.local/bin/scan
 {{- end }}
