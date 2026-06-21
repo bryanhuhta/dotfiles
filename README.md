@@ -23,3 +23,7 @@ machine-specific values:
 | `git.name`        | yes      | -            | git username                                                   |
 | `git.email`       | yes      | -            | git email                                                      |
 | `git.signingkey`  | no       | -            | SSH public key string for commit signing; enables signing when set |
+
+## Bazzite
+
+First-time setup only: after the initial `chezmoi apply` installs zsh, do **not** change the system login shell — on Bazzite this can break graphical login. Instead, point your terminal emulator at zsh (ghostty: `command = /home/linuxbrew/.linuxbrew/bin/zsh`; Ptyxis/Konsole: profile → "Use Custom Command").

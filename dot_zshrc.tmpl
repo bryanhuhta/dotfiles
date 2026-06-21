@@ -8,23 +8,30 @@ ZSH_THEME="custom-eastwood"
 DISABLE_UPDATE_PROMPT="true"
 plugins=(git virtualenv)
 
-source $ZSH/oh-my-zsh.sh
+[ -f "$ZSH/oh-my-zsh.sh" ] && source "$ZSH/oh-my-zsh.sh"
 export EDITOR=nvim
 
 # Homebrew.
+{{- if or (eq .profile "personal") (eq .profile "work") }}
 export HOMEBREW_PREFIX="/opt/homebrew";
 export HOMEBREW_CELLAR="/opt/homebrew/Cellar";
 export HOMEBREW_REPOSITORY="/opt/homebrew";
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin${PATH+:$PATH}";
 export MANPATH="/opt/homebrew/share/man${MANPATH+:$MANPATH}:";
 export INFOPATH="/opt/homebrew/share/info:${INFOPATH:-}";
+{{- end }}
+{{- if eq .profile "personal-bazzite" }}
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+{{- end }}
 
 # Go environment variables.
 export GOPATH=$HOME/go
 export PATH=$PATH:$HOME/go/bin
 
 # Allows code to be used on the commandline.
+{{- if or (eq .profile "personal") (eq .profile "work") }}
 export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+{{- end }}
 
 # Opt out of dotnet telementry.
 export DOTNET_CLI_TELEMETRY_OPTOUT=1

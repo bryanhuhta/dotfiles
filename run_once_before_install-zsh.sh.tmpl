@@ -1,0 +1,14 @@
+{{ if eq .profile "personal-bazzite" -}}
+#!/bin/bash
+set -euo pipefail
+
+# zsh (linuxbrew)
+brew install zsh
+
+# oh-my-zsh (unattended: no chsh, no shell launch)
+if [ -d "$HOME/.oh-my-zsh" ]; then
+  echo "error: $HOME/.oh-my-zsh already exists; refusing to install over an unknown installation" >&2
+  exit 1
+fi
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+{{- end }}
