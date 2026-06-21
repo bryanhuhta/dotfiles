@@ -8,9 +8,8 @@
 [pull]
 	rebase = false
 [core]
-	excludesfile = /Users/bryan/.gitignore_global
+	excludesfile = {{ .chezmoi.homeDir }}/.gitignore_global
 [commit]
-	template = /Users/bryan/.stCommitMsg
 {{- if hasKey .git "signingkey" }}
 	gpgsign = true
 {{- end }}
@@ -30,8 +29,10 @@
 	autoSetupRemote = true
 [branch]
 	autoSetupRemote = always
+{{- if or (eq .profile "personal") (eq .profile "work") }}
 [credential]
 	helper = manager-core
+{{- end }}
 [url "ssh://git@github.com/"]
 	insteadOf = https://github.com/
 {{- if hasKey .git "signingkey" }}

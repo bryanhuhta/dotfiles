@@ -19,7 +19,7 @@ machine-specific values:
 
 | Key               | Required | Default      | Description                                                    |
 |-------------------|----------|--------------|----------------------------------------------------------------|
-| `profile`         | no       | `personal`   | dotfile profile                                                |
+| `profile`         | no       | `personal`   | dotfile profile: `personal`, `work`, or `personal-bazzite`     |
 | `git.name`        | yes      | -            | git username                                                   |
 | `git.email`       | yes      | -            | git email                                                      |
 | `git.signingkey`  | no       | -            | SSH public key string for commit signing; enables signing when set |

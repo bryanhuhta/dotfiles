@@ -32,3 +32,18 @@ zed_settings.json
 .local/bin/jpegify
 .local/bin/scan
 {{- end }}
+
+{{- if eq .profile "personal-bazzite" }}
+# Bootstrapping a fresh Bazzite (Linux) machine.
+#
+# We start by ignoring EVERYTHING so `chezmoi apply` is a no-op, then port
+# configs over from the "personal"/"everything" sets one at a time by adding
+# negated exceptions below. To port a config, add a `!` line for it (you may
+# also need to un-ignore each parent directory, e.g. `!.config` before
+# `!.config/nvim/**`, due to gitignore-style negation rules).
+*
+# --- ported configs (add exceptions below this line) ---
+!.gitconfig
+!.gitignore_global
+# !.config/nvim/**
+{{- end }}
