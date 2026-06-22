@@ -1,0 +1,18 @@
+# Packages installed via `brew bundle --global` on brew-based profiles.
+# This file is only used on profiles whose install script invokes brew bundle.
+
+brew "neovim"
+brew "the_silver_searcher"
+brew "jq"
+
+{{ if or (eq .profile "personal") (eq .profile "work") -}}
+# macOS only (casks are not supported by linuxbrew)
+{{- end }}
+
+{{ if eq .profile "work" -}}
+# Work tools
+brew "kubectx"
+brew "k9s"
+brew "jenv"
+brew "rbenv"
+{{- end }}

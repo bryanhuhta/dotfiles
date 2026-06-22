@@ -1,0 +1,27 @@
+#!/bin/bash
+## Install packages declared for the active profile.
+##
+## brew-based profiles read from ~/.Brewfile via `brew bundle`. Other
+## profiles install packages by listing them inline below.
+##
+## chezmoi re-runs this script whenever its rendered content changes. For
+## brew profiles, the Brewfile's sha is embedded as a comment so edits to
+## the Brewfile also trigger a re-run.
+
+set -euo pipefail
+
+{{ if or (eq .profile "personal") (eq .profile "work") -}}
+# Brewfile sha: {{ include "dot_Brewfile.tmpl" | sha256sum }}
+/opt/homebrew/bin/brew bundle --global
+{{- else if eq .profile "personal-bazzite" -}}
+# Brewfile sha: {{ include "dot_Brewfile.tmpl" | sha256sum }}
+/home/linuxbrew/.linuxbrew/bin/brew bundle --global
+{{- else -}}
+# Example apt branch — replace with the real profile name when one exists.
+# sudo apt-get update
+# sudo apt-get install -y \
+#   neovim \
+#   silversearcher-ag \
+#   jq
+echo "install-packages: no package manager configured for profile '{{ .profile }}'" >&2
+{{- end }}
