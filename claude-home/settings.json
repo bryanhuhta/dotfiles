@@ -9,5 +9,10 @@
   "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
   "editorMode": "normal",
-  "skipAutoPermissionPrompt": true
+  "skipAutoPermissionPrompt": true,
+  "permissions": {
+    "allow": [
+      "Bash(gcx *)"
+    ]
+  }
 }
