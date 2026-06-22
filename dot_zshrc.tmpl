@@ -10,13 +10,13 @@ plugins=(git virtualenv)
 
 [ -f "$ZSH/oh-my-zsh.sh" ] && source "$ZSH/oh-my-zsh.sh"
 
-# Make ag more usable
+# Make ag output easier to read
 alias ag="ag --nogroup"
 
-# Make chezmoi easier to use
+# Make chezmoi faster to access
 alias z="chezmoi"
 
-# nvim shortcut
+# Make EDITOR faster to access
 alias e="$EDITOR"
 
 {{- if eq .profile "work" }}
