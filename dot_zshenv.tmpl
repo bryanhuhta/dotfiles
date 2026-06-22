@@ -1,0 +1,11 @@
+# Env vars needed by every shell, including non-interactive (make, git
+# hooks, scripts, cron). Keep this fast and side-effect-free.
+#
+# Do NOT set PATH here: macOS /etc/zprofile runs path_helper, which prepends
+# /etc/paths entries to whatever PATH it inherits, so anything we set in
+# .zshenv gets reordered. PATH lives in .zprofile.
+
+export EDITOR=nvim
+
+# Dedupe PATH; later additions that are already present become no-ops.
+typeset -U path PATH
