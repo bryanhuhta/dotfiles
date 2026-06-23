@@ -7,5 +7,12 @@
 
 export EDITOR=nvim
 
+# XDG Base Directory spec. macOS does not set these by default, but many
+# cross-platform tools (nvim, git, fish, ripgrep, ...) respect them.
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_STATE_HOME="$HOME/.local/state"
+export XDG_CACHE_HOME="$HOME/.cache"
+
 # Dedupe PATH; later additions that are already present become no-ops.
 typeset -U path PATH

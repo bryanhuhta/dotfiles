@@ -37,6 +37,9 @@ export NVM_DIR="$HOME/.nvm"
 
 {{- if eq .profile "work" }}
 
+# Task list (Tuxedo)
+export TODO_DIR="${XDG_DATA_HOME}/tuxedo"
+
 # Deployment tools
 export DEPLOY_TOOLS_DIR="$HOME/grafana/deployment_tools"
 export PATH="$PATH:${DEPLOY_TOOLS_DIR}/scripts/gcom"
