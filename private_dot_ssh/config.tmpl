@@ -3,4 +3,10 @@ Include ~/.orbstack/ssh/config
 
 Host *
   IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+{{ end -}}
+{{- if or (eq .profile "personal") (eq .profile "work") (eq .profile "") }}
+Host wrightauto
+  HostName 75.134.133.125
+  User kyle
+  Port 22
 {{- end }}
