@@ -5,7 +5,7 @@
 ## branches are removed. Additional branch names to keep can
 ## be passed as arguments.
 ##
-## Usage: gitbranchrm [-h] [branch...]
+## Usage: git-branch-clean [-h] [branch...]
 ##   -h         Print this help message
 ##   branch     Additional branch names to keep (master, main,
 ##              and next are always kept)
