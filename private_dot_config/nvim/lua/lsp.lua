@@ -127,7 +127,8 @@ vim.lsp.config("gopls", {
     gopls = {
       semanticTokens = true,
       completeUnimported = true,
-      analyses = { unusedparams = true },
+      -- ST1000: "at least one file in a package should have a package comment"
+      analyses = { unusedparams = true, ST1000 = false },
       staticcheck = true,
     },
   },
