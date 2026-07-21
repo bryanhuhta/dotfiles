@@ -5,16 +5,19 @@
 ## source directory if it does not already exist. Mounts the current
 ## working directory as /downloads so files saved by yt-dlp land here.
 ##
-## Wrapper flags must come before the `--` separator. Everything after
-## `--` is passed directly to yt-dlp, which avoids any collision between
-## wrapper flags and yt-dlp options.
+## Accepts any number of URLs. Wrapper flags must come before the first
+## URL. Everything from the first URL onward is passed directly to
+## yt-dlp. To pass yt-dlp flags that would collide with wrapper flags,
+## put them after a `--` separator.
 ##
-## Usage: youtube-dl [-h] [-f] [-- yt-dlp args...]
+## Usage: youtube-dl [-h] [-f] [--] [yt-dlp options...] <url>...
 ##   -h    Print this help message
 ##   -f    Force rebuild the Docker image before running
 ##
-## Example: youtube-dl -f -- -f bestaudio https://...
-##   (wrapper -f rebuilds the image; yt-dlp -f selects the format)
+## Examples:
+##   youtube-dl https://youtu.be/aaa https://youtu.be/bbb
+##   youtube-dl -f -- -f bestaudio https://...
+##     (wrapper -f rebuilds the image; yt-dlp -f selects the format)
 
 set -euo pipefail
 
@@ -32,10 +35,11 @@ while [[ $# -gt 0 ]]; do
   case "${1}" in
     -f) rebuild=true; shift ;;
     --) shift; break ;;
-    *) echo "Error: unknown wrapper argument '$1'" >&2
-       echo "Use '--' to pass arguments through to yt-dlp." >&2
-       echo "Example: youtube-dl -- $1" >&2
-       exit 1 ;;
+    -*) echo "Error: unknown wrapper flag '$1'" >&2
+        echo "Use '--' to pass flags through to yt-dlp." >&2
+        echo "Example: youtube-dl -- $1" >&2
+        exit 1 ;;
+    *) break ;;
   esac
 done
 
@@ -52,12 +56,14 @@ if ! docker image inspect "$image" &>/dev/null; then
   docker build -t "$image" -f "$dockerfile" "$context"
 fi
 
-tty_flags=()
+# Seeded with --rm so the array is never empty; bash 3.2 (macOS /bin/bash)
+# errors on empty array expansion under set -u.
+run_flags=(--rm)
 if [[ -t 0 && -t 1 ]]; then
-  tty_flags=(-it)
+  run_flags+=(-it)
 fi
 
-docker run --rm "${tty_flags[@]}" \
+docker run "${run_flags[@]}" \
   --init \
   --user "$(id -u):$(id -g)" \
   -e HOME=/tmp \

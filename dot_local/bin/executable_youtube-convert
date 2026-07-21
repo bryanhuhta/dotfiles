@@ -1,16 +1,18 @@
 #!/bin/bash
-## Check a video file for codecs incompatible with macOS QuickTime
+## Check video files for codecs incompatible with macOS QuickTime
 ## and re-encode in place if needed.
 ##
-## Inspects the video and audio streams with ffprobe. If either codec
-## is in the known-incompatible blocklist, the file is re-encoded and
-## the original is replaced. Compatible streams are copied without
-## re-encoding. The original is only overwritten on success.
+## Inspects the video and audio streams of each file with ffprobe. If
+## either codec is in the known-incompatible blocklist, the file is
+## re-encoded and the original is replaced. Compatible streams are
+## copied without re-encoding. Originals are only overwritten on
+## success. Files are processed in order; the script stops at the
+## first failure.
 ##
 ## Blocklisted video codecs: vp9, vp8, av1
 ## Blocklisted audio codecs: opus, vorbis
 ##
-## Usage: youtube-convert [-h] <input>
+## Usage: youtube-convert [-h] <input>...
 ##   -h    Print this help message
 
 set -euo pipefail
@@ -20,16 +22,17 @@ if [[ "${1:-}" == "-h" ]]; then
   exit 0
 fi
 
-input="${1:-}"
-if [[ -z "$input" ]]; then
-  echo "Usage: youtube-convert <input>" >&2
+if [[ $# -eq 0 ]]; then
+  echo "Usage: youtube-convert <input>..." >&2
   exit 1
 fi
 
-if [[ ! -f "$input" ]]; then
-  echo "Error: file not found: $input" >&2
-  exit 1
-fi
+for input in "$@"; do
+  if [[ ! -f "$input" ]]; then
+    echo "Error: file not found: $input" >&2
+    exit 1
+  fi
+done
 
 for cmd in ffmpeg ffprobe; do
   if ! command -v "$cmd" >/dev/null; then
@@ -41,49 +44,59 @@ done
 probe_codec() {
   ffprobe -v error -select_streams "$1" \
     -show_entries stream=codec_name \
-    -of default=nokey=1:noprint_wrappers=1 "$input"
+    -of default=nokey=1:noprint_wrappers=1 "$2"
 }
 
-vcodec="$(probe_codec v:0)"
-acodec="$(probe_codec a:0)"
+convert_file() {
+  local input="$1"
 
-video_args=(-c:v copy)
-audio_args=(-c:a copy)
-convert=false
+  local vcodec acodec
+  vcodec="$(probe_codec v:0 "$input")"
+  acodec="$(probe_codec a:0 "$input")"
 
-case "$vcodec" in
-  vp9|vp8|av1)
-    echo "Incompatible video codec: $vcodec -> libx264"
-    video_args=(-c:v libx264 -preset slow -crf 23 -pix_fmt yuv420p)
-    convert=true
-    ;;
-  "")
-    echo "Warning: no video stream detected" >&2
-    ;;
-esac
+  local video_args=(-c:v copy)
+  local audio_args=(-c:a copy)
+  local convert=false
 
-case "$acodec" in
-  opus|vorbis)
-    echo "Incompatible audio codec: $acodec -> aac"
-    audio_args=(-c:a aac -b:a 192k)
-    convert=true
-    ;;
-esac
+  case "$vcodec" in
+    vp9|vp8|av1)
+      echo "Incompatible video codec in $input: $vcodec -> libx264"
+      video_args=(-c:v libx264 -preset slow -crf 23 -pix_fmt yuv420p)
+      convert=true
+      ;;
+    "")
+      echo "Warning: no video stream detected in $input" >&2
+      ;;
+  esac
 
-if ! $convert; then
-  echo "Codecs are compatible with QuickTime. Nothing to do."
-  exit 0
-fi
+  case "$acodec" in
+    opus|vorbis)
+      echo "Incompatible audio codec in $input: $acodec -> aac"
+      audio_args=(-c:a aac -b:a 192k)
+      convert=true
+      ;;
+  esac
 
-tmp="${input%.*}.converting.$$.mp4"
+  if ! $convert; then
+    echo "Codecs are compatible with QuickTime. Nothing to do: $input"
+    return 0
+  fi
+
+  tmp="${input%.*}.converting.$$.mp4"
+
+  ffmpeg -nostdin -y -i "$input" \
+    "${video_args[@]}" \
+    "${audio_args[@]}" \
+    -movflags +faststart \
+    "$tmp"
+
+  mv -f "$tmp" "$input"
+  echo "Converted in place: $input"
+}
+
+tmp=""
 trap 'rm -f "$tmp"' EXIT
 
-ffmpeg -nostdin -y -i "$input" \
-  "${video_args[@]}" \
-  "${audio_args[@]}" \
-  -movflags +faststart \
-  "$tmp"
-
-mv -f "$tmp" "$input"
-trap - EXIT
-echo "Converted in place: $input"
+for input in "$@"; do
+  convert_file "$input"
+done

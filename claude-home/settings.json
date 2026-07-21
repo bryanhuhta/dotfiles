@@ -1,5 +1,10 @@
 {
-  "model": "opus[1m]",
+  "permissions": {
+    "allow": [
+      "Bash(gcx *)"
+    ]
+  },
+  "model": "claude-fable-5[1m]",
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "slack@claude-plugins-official": true
@@ -8,11 +13,7 @@
   "effortLevel": "xhigh",
   "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
+  "skipWorkflowUsageWarning": true,
   "editorMode": "normal",
-  "skipAutoPermissionPrompt": true,
-  "permissions": {
-    "allow": [
-      "Bash(gcx *)"
-    ]
-  }
+  "skipAutoPermissionPrompt": true
 }

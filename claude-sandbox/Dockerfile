@@ -8,6 +8,7 @@ RUN apk add --no-cache \
   github-cli \
   jq \
   make \
+  sqlite \
   neovim
 
 # Go
