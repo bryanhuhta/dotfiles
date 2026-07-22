@@ -29,6 +29,12 @@ After making changes, always tell the user to run `chezmoi diff` to review and `
 
 ---
 
+## Secrets
+
+Secrets live in the macOS Keychain, never in this repository. Scripts read them at runtime with `security find-generic-password`. `README.md` keeps the authoritative list of Keychain items and their rotation steps — when adding or removing a Keychain-read secret, update that list.
+
+---
+
 ## What Is chezmoi
 
 chezmoi manages dotfiles by maintaining a **source directory** (default: `~/.local/share/chezmoi`) that is a git repository. Files in this directory are transformed and written to their target locations (typically `$HOME`). The source directory is where all edits happen.

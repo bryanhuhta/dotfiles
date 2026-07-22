@@ -14,6 +14,10 @@ RUN apk add --no-cache \
 # Go
 RUN apk add --no-cache go
 
+# gcx
+RUN GOBIN=/usr/local/bin go install github.com/grafana/gcx/cmd/gcx@latest && \
+  go clean -modcache -cache
+
 # Python
 RUN apk add --no-cache \
   python3 \

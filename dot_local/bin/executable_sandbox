@@ -7,6 +7,10 @@
 ## Authenticates by reading the Claude Code credential from the macOS
 ## Keychain and passing it as ANTHROPIC_API_KEY to the container.
 ##
+## If a "gcx-sandbox" credential exists in the macOS Keychain, passes it
+## as GRAFANA_TOKEN along with GRAFANA_SERVER (read from the host's gcx
+## current context) so gcx is authenticated in the container.
+##
 ## Usage: sandbox [-h] [-f] [-w] [args...]
 ##   -h    Print this help message
 ##   -f    Force rebuild the Docker image before running
@@ -59,8 +63,20 @@ if $writable; then
   mount_opts="rw"
 fi
 
-docker run --rm -it \
-  -e "ANTHROPIC_API_KEY=${api_key}" \
-  -e "GH_TOKEN=${gh_token}" \
-  -v "$(pwd):/workspace:${mount_opts}" \
-  "$image" "$@"
+run_args=(
+  --rm -it
+  -e "ANTHROPIC_API_KEY=${api_key}"
+  -e "GH_TOKEN=${gh_token}"
+  -v "$(pwd):/workspace:${mount_opts}"
+)
+
+gcx_token=$(security find-generic-password -s "gcx-sandbox" -w 2>/dev/null) || true
+gcx_server=$(gcx config view -o json 2>/dev/null | jq -r '.contexts[."current-context"].grafana.server // empty') || true
+if [[ -n "${gcx_token:-}" && -n "${gcx_server:-}" ]]; then
+  run_args+=(
+    -e "GRAFANA_TOKEN=${gcx_token}"
+    -e "GRAFANA_SERVER=${gcx_server}"
+  )
+fi
+
+docker run "${run_args[@]}" "$image" "$@"

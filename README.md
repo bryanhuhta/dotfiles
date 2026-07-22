@@ -24,6 +24,44 @@ machine-specific values:
 | `git.email`       | yes      | -            | git email                                                      |
 | `git.signingkey`  | no       | -            | SSH public key string for commit signing; enables signing when set |
 
+## Keychain secrets
+
+Secrets are never stored in this repository. Scripts read them from the
+macOS Keychain at runtime. This table is the authoritative list — when
+adding a script that reads a new Keychain item, add it here.
+
+| Keychain item | Contents                                        | Used by                                    |
+|---------------|-------------------------------------------------|--------------------------------------------|
+| `Claude Code` | Claude Code credential (managed by Claude Code) | `sandbox` — passed as `ANTHROPIC_API_KEY`  |
+| `gcx-sandbox` | Grafana service-account token (`glsa_...`)      | `sandbox` — passed as `GRAFANA_TOKEN`      |
+
+The `sandbox` script also forwards a GitHub token, but that is managed by
+the `gh` CLI (rotate with `gh auth login`), not the Keychain.
+
+### Rotating `Claude Code`
+
+This item is created and updated by Claude Code itself. Re-authenticate to
+write a fresh credential:
+
+```sh
+claude auth login
+```
+
+Revoke the old credential from the Anthropic console (API keys) or your
+claude.ai account settings.
+
+### Rotating `gcx-sandbox`
+
+1. In the Grafana instance, create a new token for the service account
+   (Administration → Users and access → Service accounts), then revoke the
+   old token.
+2. Update the Keychain item — the `-w` flag with no value prompts for the
+   token interactively so it stays out of shell history:
+
+   ```sh
+   security add-generic-password -a "$USER" -s "gcx-sandbox" -U -w
+   ```
+
 ## Bazzite
 
 First-time setup only: after the initial `chezmoi apply` installs zsh, do **not** change the system login shell — on Bazzite this can break graphical login. Instead, point your terminal emulator at zsh (ghostty: `command = /home/linuxbrew/.linuxbrew/bin/zsh`; Ptyxis/Konsole: profile → "Use Custom Command").
