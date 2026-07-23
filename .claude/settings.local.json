@@ -18,7 +18,10 @@
       "WebFetch(domain:docs.bazzite.gg)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(git *)",
-      "Bash(go version *)"
+      "Bash(go version *)",
+      "Bash(claude plugin *)",
+      "Bash(bash -n /Users/bryan/.local/share/chezmoi/dot_local/bin/executable_sandbox)",
+      "Bash(bash -n /Users/bryan/.local/share/chezmoi/claude-sandbox/entrypoint.sh)"
     ]
   }
 }

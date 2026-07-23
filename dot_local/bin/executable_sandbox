@@ -11,6 +11,10 @@
 ## macOS Keychain and passes it as GRAFANA_TOKEN, with GRAFANA_SERVER set
 ## to the ops instance, so gcx is authenticated in the container.
 ##
+## Reads MCP OAuth credentials from the "Claude Code-credentials" item in
+## the macOS Keychain and passes them as CLAUDE_CREDENTIALS so plugin
+## integrations (e.g. Slack) are authenticated in the container.
+##
 ## Usage: sandbox [-h] [-f] [-w] [args...]
 ##   -h    Print this help message
 ##   -f    Force rebuild the Docker image before running
@@ -78,6 +82,13 @@ if [[ -n "${gcx_token:-}" ]]; then
   )
 elif command -v gcx >/dev/null; then
   echo "Warning: 'gcx-sandbox' not found in Keychain; gcx will not be authenticated" >&2
+fi
+
+mcp_creds=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null) || true
+if [[ -n "${mcp_creds:-}" ]]; then
+  run_args+=(-e "CLAUDE_CREDENTIALS=${mcp_creds}")
+else
+  echo "Warning: 'Claude Code-credentials' not found in Keychain; Slack will not be authenticated" >&2
 fi
 
 docker run "${run_args[@]}" "$image" "$@"

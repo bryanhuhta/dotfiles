@@ -1,6 +1,9 @@
 {
   "theme": "dark",
   "skipDangerousModePermissionPrompt": true,
+  "enabledPlugins": {
+    "slack@claude-plugins-official": true
+  },
   "permissions": {
     "allow": [
       "Bash(*)",

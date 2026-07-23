@@ -51,6 +51,12 @@ COPY --chown=claude:claude claude-sandbox/claude-state.json /home/claude/.claude
 COPY --chown=claude:claude claude-home/CLAUDE.md /home/claude/.claude/CLAUDE.md
 COPY --chown=claude:claude claude-home/skills/ /home/claude/.claude/skills/
 
+# Slack plugin; its MCP OAuth credentials are injected at runtime by the
+# sandbox script via CLAUDE_CREDENTIALS (marketplace add tolerates the
+# marketplace already being registered)
+RUN claude plugin marketplace add anthropics/claude-plugins-official || true && \
+  claude plugin install slack@claude-plugins-official
+
 # Neovim configuration
 ENV EDITOR=nvim
 RUN mkdir -p /home/claude/.config/nvim
@@ -59,4 +65,6 @@ RUN nvim --headless "+Lazy! sync" +qa
 
 WORKDIR /workspace
 
-ENTRYPOINT ["claude", "--dangerously-skip-permissions"]
+# Entrypoint writes runtime-injected credentials before starting Claude
+COPY --chown=claude:claude claude-sandbox/entrypoint.sh /home/claude/entrypoint.sh
+ENTRYPOINT ["/home/claude/entrypoint.sh"]

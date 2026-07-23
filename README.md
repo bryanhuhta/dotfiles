@@ -30,10 +30,11 @@ Secrets are never stored in this repository. Scripts read them from the
 macOS Keychain at runtime. This table is the authoritative list — when
 adding a script that reads a new Keychain item, add it here.
 
-| Keychain item | Contents                                        | Used by                                    |
-|---------------|-------------------------------------------------|--------------------------------------------|
-| `Claude Code` | Claude Code credential (managed by Claude Code) | `sandbox` — passed as `ANTHROPIC_API_KEY`  |
-| `gcx-sandbox` | Grafana service-account token (`glsa_...`)      | `sandbox` — passed as `GRAFANA_TOKEN`      |
+| Keychain item             | Contents                                          | Used by                                     |
+|---------------------------|---------------------------------------------------|---------------------------------------------|
+| `Claude Code`             | Claude Code credential (managed by Claude Code)   | `sandbox` — passed as `ANTHROPIC_API_KEY`   |
+| `Claude Code-credentials` | MCP OAuth tokens (managed by Claude Code)         | `sandbox` — passed as `CLAUDE_CREDENTIALS`  |
+| `gcx-sandbox`             | Grafana service-account token (`glsa_...`)        | `sandbox` — passed as `GRAFANA_TOKEN`       |
 
 The `sandbox` script also forwards a GitHub token, but that is managed by
 the `gh` CLI (rotate with `gh auth login`), not the Keychain.
@@ -49,6 +50,13 @@ claude auth login
 
 Revoke the old credential from the Anthropic console (API keys) or your
 claude.ai account settings.
+
+### Rotating `Claude Code-credentials`
+
+This item holds OAuth tokens for plugin MCP servers (currently Slack) and
+is created and updated by Claude Code itself. To refresh, reconnect the
+server on the host: run `/mcp` inside Claude Code and re-authenticate the
+Slack server. Revoke old grants from the Slack workspace's app settings.
 
 ### Rotating `gcx-sandbox`
 
