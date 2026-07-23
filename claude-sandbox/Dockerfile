@@ -12,7 +12,9 @@ RUN apk add --no-cache \
   neovim
 
 # Go
+# Alpine pins GOTOOLCHAIN=local; auto lets go fetch newer toolchains on demand
 RUN apk add --no-cache go
+ENV GOTOOLCHAIN=auto
 
 # gcx
 RUN GOBIN=/usr/local/bin go install github.com/grafana/gcx/cmd/gcx@latest && \
