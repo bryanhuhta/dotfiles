@@ -13,8 +13,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("n", "<leader>rn", vim.lsp.buf.rename,         "Rename symbol")
     map("n", "<leader>ca", vim.lsp.buf.code_action,    "Code action")
     map("n", "<leader>e",  vim.diagnostic.open_float,  "Show line diagnostics")
-    map("n", "[d",         vim.diagnostic.goto_prev,   "Previous diagnostic")
-    map("n", "]d",         vim.diagnostic.goto_next,   "Next diagnostic")
+    map("n", "[d",         function() vim.diagnostic.jump({ count = -1 }) end, "Previous diagnostic")
+    map("n", "]d",         function() vim.diagnostic.jump({ count = 1 }) end,  "Next diagnostic")
   end,
 })
 
@@ -155,6 +155,18 @@ vim.lsp.config("rust_analyzer", {
   },
 })
 vim.lsp.enable("rust_analyzer")
+
+local jdtls_cache = vim.fn.stdpath("cache") .. "/jdtls"
+vim.lsp.config("jdtls", {
+  cmd = {
+    "jdtls",
+    "-configuration", jdtls_cache .. "/config",
+    "-data", jdtls_cache .. "/workspace",
+  },
+  filetypes = { "java" },
+  root_markers = { "gradlew", "mvnw", "pom.xml", "build.gradle", "build.gradle.kts", ".git" },
+})
+vim.lsp.enable("jdtls")
 
 vim.lsp.config("zls", {
   cmd = { "zls" },
