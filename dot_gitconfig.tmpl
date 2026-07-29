@@ -32,12 +32,8 @@
 	autoSetupRemote = true
 [branch]
 	autoSetupRemote = always
-{{- if or (eq .profile "personal") (eq .profile "work") }}
-[credential]
-	helper = manager-core
-{{- end }}
 [url "ssh://git@github.com/"]
-	insteadOf = https://github.com/
+	pushInsteadOf = https://github.com/
 {{- if hasKey .git "signingkey" }}
 [tag]
 	gpgsign = true

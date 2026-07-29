@@ -1,5 +1,6 @@
 CLAUDE.md
 README.md
+SETUP.md
 
 # Claude sandbox
 claude-sandbox/
@@ -9,6 +10,9 @@ youtube-dl/
 
 # scan (trivy + grype) docker build context
 scan/
+
+# utility (ffmpeg + imagemagick) docker build context
+utility/
 
 # Symlink targets for ~/.claude (externally modified files)
 claude-home/

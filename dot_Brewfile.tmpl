@@ -1,19 +1,73 @@
 # Packages installed via `brew bundle --global` on brew-based profiles.
 # This file is only used on profiles whose install script invokes brew bundle.
 
-brew "neovim"
-brew "the_silver_searcher"
-brew "jq"
+brew "chezmoi"             # Dotfile manager
+brew "fzf"                 # Fuzzy finder (used by the nvim fzf plugin)
+brew "jq"                  # Parse JSON from the command line
+brew "neovim"              # Neovim, of course
+brew "the_silver_searcher" # ag (better version of grep)
+brew "tree"                # Display directories as trees
+brew "tree-sitter-cli"     # Compiles nvim-treesitter grammars
 
 {{ if or (eq .profile "personal") (eq .profile "work") -}}
 # macOS only (casks are not supported by linuxbrew)
+brew "git"     # Version control system
+brew "git-lfs" # Large file storage (gitconfig declares required lfs filters)
+cask "ghostty" # Terminal emulator
+{{- end }}
+
+{{ if eq .profile "personal" -}}
+# Personal tools
+cask "gnucash" # Double-entry accounting
 {{- end }}
 
 {{ if eq .profile "work" -}}
 # Work tools
-brew "kubectx"
-brew "k9s"
-brew "jenv"
-brew "rbenv"
-brew "jdtls"
+
+# Operations tools
+brew "awscli"         # AWS cli
+brew "azure-cli"      # Azure cli
+brew "helm"           # Kubernetes package manager
+brew "jsonnet"        # Jsonnet language
+brew "kubectx"        # List and switch between Kubernetes contexts
+brew "kubernetes-cli" # kubectl
+brew "tailscale"      # Tailscale VPN
+brew "tanka"          # Grafana's Jsonnet-based Kubernetes config tool
+cask "aptakube"       # Kubernetes management GUI
+cask "gcloud-cli"     # Google Cloud cli
+
+# Development tools
+brew "buf"            # Protobuf build tool
+brew "gh"             # GitHub cli
+brew "go"             # go programming language
+brew "gradle"         # JVM build tool
+brew "jenv"           # Java environment manager
+brew "k6"             # Load testing tool
+brew "libpq"          # Postgres client tools (psql)
+brew "openjdk@21"     # LTS JDK, registered with jenv for version switching
+brew "protobuf"       # Protocol buffers (protoc)
+brew "zig"            # Zig programming language
+cask "claude-code"    # Claude Code
+cask "dotnet-sdk"     # .NET SDK
+cask "zed"            # GUI code editor
+
+# Productivity tools
+brew "duckdb"         # In-process SQL OLAP database
+brew "graphviz"       # Graph visualization (dot)
+brew "tuxedo"         # todo.txt TUI
+cask "1password-cli"  # 1Password cli
+cask "gitify"         # GitHub notifications in the menu bar
+cask "markedit"       # Markdown reader
+cask "rectangle"      # Window manager
+
+# Neovim dependencies
+brew "gopls"          # Go language server
+brew "jdtls"          # Java language server
+brew "zls"            # Zig language server
+
+# adopt: take over the existing OrbStack.app if it was installed directly
+cask "orbstack", args: { adopt: true } # Docker engine
+
+tap "agavra/tap"        # git review TUI
+brew "agavra/tap/tuicr"
 {{- end }}

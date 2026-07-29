@@ -7,15 +7,21 @@
 ## chezmoi re-runs this script whenever its rendered content changes. For
 ## brew profiles, the Brewfile's sha is embedded as a comment so edits to
 ## the Brewfile also trigger a re-run.
+##
+## Applying converges only: missing packages are installed, but packages
+## that are already installed are left at their current version. Upgrade
+## intentionally with `brew bundle upgrade --global` or `brew upgrade`.
 
 set -euo pipefail
 
+export HOMEBREW_NO_AUTO_UPDATE=1
+
 {{ if or (eq .profile "personal") (eq .profile "work") -}}
 # Brewfile sha: {{ include "dot_Brewfile.tmpl" | sha256sum }}
-/opt/homebrew/bin/brew bundle --global
+/opt/homebrew/bin/brew bundle install --global --no-upgrade
 {{- else if eq .profile "personal-bazzite" -}}
 # Brewfile sha: {{ include "dot_Brewfile.tmpl" | sha256sum }}
-/home/linuxbrew/.linuxbrew/bin/brew bundle --global
+/home/linuxbrew/.linuxbrew/bin/brew bundle install --global --no-upgrade
 {{- else -}}
 # Example apt branch — replace with the real profile name when one exists.
 # sudo apt-get update

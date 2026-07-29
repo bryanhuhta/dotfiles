@@ -38,11 +38,6 @@ alias gcomd-reconcile="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-dev-reconcile"
 alias gcomo-reconcile="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-ops-reconcile"
 alias gcom-reconcile="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-reconcile"
 
-# k9s
-alias k9sdev="k9s --context dev-us-central-0 --namespace fire-dev-001"
-alias k9sops="k9s --context ops-us-east-0 --namespace profiles-ops-001"
-alias k9sctx="k9s --context"
-
 # kubectx
 alias ktx="kubectx -c"
 alias ktxlist="kubectx -c | xargs printf 'current: %s\n\n' && kubectx | grep -vE '^pop-'"

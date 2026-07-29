@@ -1,8 +1,10 @@
 #!/bin/bash
-## Convert a .mov file to .mp4 using ffmpeg.
+## Convert a .mov file to .mp4 using ffmpeg (via the `utility` Docker
+## container).
 ##
 ## Output is written to the same directory as the input with
 ## a .mp4 extension. Uses libx264 video and AAC audio encoding.
+## The input path must be inside the current directory.
 ##
 ## Usage: movtomp4 [-h] <input.mov>
 ##   -h    Print this help message
@@ -21,4 +23,4 @@ if [[ -z "$input" ]]; then
 fi
 
 output="${input%.*}.mp4"
-ffmpeg -i "$input" -vcodec libx264 -crf 28 -preset slow -acodec aac -b:a 128k "$output"
+utility ffmpeg -i "$input" -vcodec libx264 -crf 28 -preset slow -acodec aac -b:a 128k "$output"

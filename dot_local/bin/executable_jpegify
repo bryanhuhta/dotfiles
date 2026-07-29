@@ -1,8 +1,9 @@
 #!/bin/bash
-## Convert a .webp image to .jpg using ImageMagick.
+## Convert a .webp image to .jpg using ImageMagick (via the `utility`
+## Docker container).
 ##
-## Output is written to the same directory as the input
-## with a .jpg extension.
+## Output is written to the current directory with a .jpg extension.
+## The input path must be inside the current directory.
 ##
 ## Usage: jpegify [-h] <file.webp>
 ##   -h    Print this help message
@@ -21,4 +22,4 @@ fi
 
 file="$1"
 name=$(basename "$file" ".webp")
-magick -format jpg "$file" "${name}.jpg"
+utility magick -format jpg "$file" "${name}.jpg"

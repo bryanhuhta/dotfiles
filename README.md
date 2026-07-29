@@ -3,6 +3,8 @@
 This repository contains dotfiles managed using
 [chezmoi](https://www.chezmoi.io/).
 
+Setting up a new machine? Follow the runbook in [SETUP.md](SETUP.md).
+
 ## Config
 
 Create `~/.config/chezmoi/chezmoi.toml` with a `[data]` section to configure
@@ -19,7 +21,7 @@ machine-specific values:
 
 | Key               | Required | Default      | Description                                                    |
 |-------------------|----------|--------------|----------------------------------------------------------------|
-| `profile`         | no       | `personal`   | dotfile profile: `personal`, `work`, or `personal-bazzite`     |
+| `profile`         | yes      | -            | dotfile profile: `personal`, `work`, or `personal-bazzite`; templates fail to render if unset |
 | `git.name`        | yes      | -            | git username                                                   |
 | `git.email`       | yes      | -            | git email                                                      |
 | `git.signingkey`  | no       | -            | SSH public key string for commit signing; enables signing when set |

@@ -21,7 +21,16 @@
       "Bash(go version *)",
       "Bash(claude plugin *)",
       "Bash(bash -n /Users/bryan/.local/share/chezmoi/dot_local/bin/executable_sandbox)",
-      "Bash(bash -n /Users/bryan/.local/share/chezmoi/claude-sandbox/entrypoint.sh)"
+      "Bash(bash -n /Users/bryan/.local/share/chezmoi/claude-sandbox/entrypoint.sh)",
+      "Bash(brew leaves *)",
+      "Bash(brew list *)",
+      "Bash(brew tap *)",
+      "Bash(brew info *)",
+      "Read(//opt/homebrew/Caskroom/gcloud-cli/**)",
+      "Read(//opt/homebrew/Cellar/tuicr/0.15.0/**)",
+      "Read(//opt/homebrew/Cellar/tuxedo/**)",
+      "Read(//tmp/**)",
+      "Bash(brew autoremove *)"
     ]
   }
 }

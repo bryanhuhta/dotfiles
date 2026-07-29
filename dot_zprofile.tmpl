@@ -54,17 +54,13 @@ export GCOM_CONFIG_DIR="$HOME/.gcom"
 # k8s contexts
 export KUBECONFIG="$HOME/.kube/config":"$HOME/.kube/config-kind"
 
-# Google cloud sdk
-export PATH="$PATH:${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin"
+# Google cloud sdk components (gcloud itself is linked into brew's bin by
+# the gcloud-cli cask; components like gke-gcloud-auth-plugin land here)
+export PATH="$PATH:${HOMEBREW_PREFIX}/share/google-cloud-sdk/bin"
 
 # jenv (after other PATH modifications so shims take precedence)
 if command -v jenv &>/dev/null; then
   eval "$(jenv init -)"
-fi
-
-# rbenv (after other PATH modifications so shims take precedence)
-if command -v rbenv &>/dev/null; then
-  eval "$(rbenv init - --no-rehash zsh)"
 fi
 {{- end }}
 

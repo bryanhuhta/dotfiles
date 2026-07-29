@@ -1,0 +1,66 @@
+#!/bin/bash
+## Run media/utility tools (ffmpeg, ffprobe, magick) in a Docker container.
+##
+## Builds the Docker image from utility/Dockerfile in the chezmoi source
+## directory if it does not already exist. Mounts the current working
+## directory read-write at /workspace, so input and output paths must be
+## relative and inside the current directory.
+##
+## With no command, drops into an interactive sh shell with the tools on
+## PATH. With arguments, runs them inside the container.
+##
+## Usage: utility [-h] [-f] [command [args...]]
+##   -h    Print this help message
+##   -f    Force rebuild the Docker image before running
+##
+## Examples:
+##   utility                              # interactive shell
+##   utility ffmpeg -i in.mov out.mp4     # transcode a file in the cwd
+##   utility magick in.webp out.gif       # convert an image in the cwd
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+image="utility-tools"
+context="$(chezmoi source-path)/utility"
+dockerfile="${context}/Dockerfile"
+force=false
+
+while [[ "${1:-}" == -* ]]; do
+  case "${1:-}" in
+    -f) force=true; shift ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+if [[ ! -f "$dockerfile" ]]; then
+  echo "Error: Dockerfile not found at $dockerfile"
+  exit 1
+fi
+
+if $force; then
+  docker rmi -f "$image" &>/dev/null || true
+fi
+
+if ! docker image inspect "$image" &>/dev/null; then
+  docker build -t "$image" -f "$dockerfile" "$context"
+fi
+
+# Seeded with --rm so the array is never empty; bash 3.2 (macOS /bin/bash)
+# errors on empty array expansion under set -u.
+run_flags=(--rm)
+if [[ -t 0 && -t 1 ]]; then
+  run_flags+=(-it)
+fi
+
+docker run "${run_flags[@]}" \
+  --init \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp \
+  -v "$(pwd):/workspace" \
+  "$image" "$@"

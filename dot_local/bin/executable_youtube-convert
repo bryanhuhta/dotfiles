@@ -2,6 +2,9 @@
 ## Check video files for codecs incompatible with macOS QuickTime
 ## and re-encode in place if needed.
 ##
+## Runs ffmpeg/ffprobe via the `utility` Docker container, so input
+## paths must be inside the current directory.
+##
 ## Inspects the video and audio streams of each file with ffprobe. If
 ## either codec is in the known-incompatible blocklist, the file is
 ## re-encoded and the original is replaced. Compatible streams are
@@ -34,15 +37,13 @@ for input in "$@"; do
   fi
 done
 
-for cmd in ffmpeg ffprobe; do
-  if ! command -v "$cmd" >/dev/null; then
-    echo "Error: $cmd not found on PATH" >&2
-    exit 1
-  fi
-done
+if ! command -v utility >/dev/null; then
+  echo "Error: utility not found on PATH" >&2
+  exit 1
+fi
 
 probe_codec() {
-  ffprobe -v error -select_streams "$1" \
+  utility ffprobe -v error -select_streams "$1" \
     -show_entries stream=codec_name \
     -of default=nokey=1:noprint_wrappers=1 "$2"
 }
@@ -84,7 +85,7 @@ convert_file() {
 
   tmp="${input%.*}.converting.$$.mp4"
 
-  ffmpeg -nostdin -y -i "$input" \
+  utility ffmpeg -nostdin -y -i "$input" \
     "${video_args[@]}" \
     "${audio_args[@]}" \
     -movflags +faststart \

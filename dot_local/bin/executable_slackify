@@ -1,9 +1,10 @@
 #!/bin/bash
-## Resize images to fit Slack's upload size limits using ImageMagick.
+## Resize images to fit Slack's upload size limits using ImageMagick
+## (via the `utility` Docker container).
 ##
 ## Accepts a single file or a directory of images. Output files are
 ## written with a "-slackified" suffix. An optional output directory
-## can be specified.
+## can be specified. All paths must be inside the current directory.
 ##
 ## Usage: slackify [-h] <file|directory> [output_dir]
 ##   -h            Print this help message
@@ -52,5 +53,5 @@ for f in "${files[@]}"; do
   if [[ -n "$outdir" ]]; then
     outfile="${outdir}/$(basename "$outfile")"
   fi
-  magick "$f" -resize 44000000@ "$outfile"
+  utility magick "$f" -resize 44000000@ "$outfile"
 done
