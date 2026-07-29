@@ -25,50 +25,51 @@ cask "gnucash" # Double-entry accounting
 # Work tools
 
 # Operations tools
-brew "awscli"         # AWS cli
-brew "azure-cli"      # Azure cli
-brew "helm"           # Kubernetes package manager
-brew "jsonnet"        # Jsonnet language
-brew "kubectx"        # List and switch between Kubernetes contexts
-brew "kubernetes-cli" # kubectl
-brew "tailscale"      # Tailscale VPN
-brew "tanka"          # Grafana's Jsonnet-based Kubernetes config tool
-cask "aptakube"       # Kubernetes management GUI
-cask "gcloud-cli"     # Google Cloud cli
+brew "awscli"                   # AWS cli
+brew "azure-cli"                # Azure cli
+brew "helm"                     # Kubernetes package manager
+brew "jsonnet"                  # Jsonnet language
+brew "kubectx"                  # List and switch between Kubernetes contexts
+brew "kubernetes-cli"           # kubectl
+brew "tailscale"                # Tailscale VPN
+brew "tanka"                    # Grafana's Jsonnet-based Kubernetes config tool
+cask "aptakube"                 # Kubernetes management GUI
+cask "gcloud-cli"               # Google Cloud cli
 
 # Development tools
-brew "buf"            # Protobuf build tool
-brew "gh"             # GitHub cli
-brew "go"             # go programming language
-brew "gradle"         # JVM build tool
-brew "jenv"           # Java environment manager
-brew "k6"             # Load testing tool
-brew "libpq"          # Postgres client tools (psql)
-brew "openjdk@21"     # LTS JDK, registered with jenv for version switching
-brew "protobuf"       # Protocol buffers (protoc)
-brew "zig"            # Zig programming language
-cask "claude-code"    # Claude Code
-cask "dotnet-sdk"     # .NET SDK
-cask "zed"            # GUI code editor
+brew "buf"                      # Protobuf build tool
+cask "claude-code"              # Claude Code
+brew "docker"                   # Docker cli
+brew "docker-credential-helper" # Manage docker credentials
+cask "dotnet-sdk"               # .NET SDK
+brew "gh"                       # GitHub cli
+brew "go"                       # go programming language
+brew "gradle"                   # JVM build tool
+brew "jenv"                     # Java environment manager
+brew "k6"                       # Load testing tool
+brew "libpq"                    # Postgres client tools (psql)
+brew "openjdk@21"               # LTS JDK, registered with jenv for version switching
+cask "orbstack"                 # Docker engine
+brew "protobuf"                 # Protocol buffers (protoc)
+brew "zig"                      # Zig programming language
+cask "zed"                      # GUI code editor
 
 # Productivity tools
-brew "duckdb"         # In-process SQL OLAP database
-brew "graphviz"       # Graph visualization (dot)
-brew "tuxedo"         # todo.txt TUI
-cask "1password-cli"  # 1Password cli
-cask "gitify"         # GitHub notifications in the menu bar
-cask "markedit"       # Markdown reader
-cask "rectangle"      # Window manager
-cask "slack"          # Communication tool
+brew "duckdb"                   # In-process SQL OLAP database
+brew "graphviz"                 # Graph visualization (dot)
+brew "tuxedo"                   # todo.txt TUI
+cask "1password-cli"            # 1Password cli
+cask "gitify"                   # GitHub notifications in the menu bar
+cask "markedit"                 # Markdown reader
+cask "rectangle"                # Window manager
+cask "slack"                    # Communication tool
 
 # Neovim dependencies
-brew "gopls"          # Go language server
-brew "jdtls"          # Java language server
-brew "zls"            # Zig language server
+brew "gopls"                    # Go language server
+brew "jdtls"                    # Java language server
+brew "zls"                      # Zig language server
 
-# adopt: take over the existing OrbStack.app if it was installed directly
-cask "orbstack", args: { adopt: true } # Docker engine
 
-tap "agavra/tap"        # git review TUI
+tap "agavra/tap"                # git review TUI
 brew "agavra/tap/tuicr"
 {{- end }}
