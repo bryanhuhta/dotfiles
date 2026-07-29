@@ -26,6 +26,10 @@ zed_settings.json
 {{- end }}
 
 {{- if ne .profile "work" }}
+# MarkEdit is only installed on the work profile (see dot_Brewfile.tmpl); this
+# also skips the markedit-preview external in .chezmoiexternal.toml
+Library/Containers/app.cyan.markedit/**
+
 # work-only scripts
 .local/bin/sso
 .local/bin/mermaid

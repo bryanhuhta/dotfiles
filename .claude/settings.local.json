@@ -30,7 +30,9 @@
       "Read(//opt/homebrew/Cellar/tuicr/0.15.0/**)",
       "Read(//opt/homebrew/Cellar/tuxedo/**)",
       "Read(//tmp/**)",
-      "Bash(brew autoremove *)"
+      "Bash(brew autoremove *)",
+      "Read(//Users/work/Library/Containers/app.cyan.markedit/Data/Documents/**)",
+      "Read(//Users/work/Library/Containers/app.cyan.markedit/Data/Documents/scripts/**)"
     ]
   }
 }

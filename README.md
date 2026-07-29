@@ -26,6 +26,25 @@ machine-specific values:
 | `git.email`       | yes      | -            | git email                                                      |
 | `git.signingkey`  | no       | -            | SSH public key string for commit signing; enables signing when set |
 
+## MarkEdit preview extension
+
+The [MarkEdit-preview](https://github.com/MarkEdit-app/MarkEdit-preview)
+extension is managed by chezmoi on the `work` profile (MarkEdit itself is
+installed by the Brewfile there):
+
+- **Version** is pinned in `.chezmoidata.toml` (`markeditPreview.version`).
+  To upgrade, pick a tag from the
+  [releases](https://github.com/MarkEdit-app/MarkEdit-preview/tags), bump the
+  value, and run `chezmoi apply` — `.chezmoiexternal.toml` embeds the version
+  in the download URL, so changing it re-downloads the script.
+- **Settings** live under the `extension.markeditPreview` node in MarkEdit's
+  managed `settings.json`
+  (`~/Library/Containers/app.cyan.markedit/Data/Documents/settings.json`).
+  The extension's self-update check is set to `never` since chezmoi owns the
+  version.
+
+Restart MarkEdit after applying for changes to take effect.
+
 ## Keychain secrets
 
 Secrets are never stored in this repository. Scripts read them from the

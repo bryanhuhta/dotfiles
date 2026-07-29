@@ -1,0 +1,7 @@
+# Repo-wide template data (tracked, unlike the machine-local chezmoi.toml).
+
+[markeditPreview]
+    # Release tag (without the "v" prefix) from
+    # https://github.com/MarkEdit-app/MarkEdit-preview/tags.
+    # Bump this and run `chezmoi apply` to upgrade the extension.
+    version = "1.8.1"
