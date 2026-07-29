@@ -17,9 +17,6 @@ eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 # Utility scripts
 export PATH="$HOME/.local/bin:$PATH"
 
-# Rust / cargo
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-
 {{- if or (eq .profile "personal") (eq .profile "work") }}
 
 # Go
@@ -28,6 +25,9 @@ export PATH="$PATH:$HOME/go/bin"
 
 # Dotnet
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+# Rust / cargo
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 # node, nvm
 export NVM_DIR="$HOME/.nvm"
