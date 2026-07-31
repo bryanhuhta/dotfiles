@@ -42,7 +42,8 @@
       "Read(//Users/work/.local/bin/**)",
       "Bash(security find-generic-password *)",
       "Bash(bash -n /Users/work/.local/share/chezmoi/dot_local/bin/executable_sandbox)",
-      "Bash(bash -n /Users/work/.local/share/chezmoi/claude-sandbox/entrypoint.sh)"
+      "Bash(bash -n /Users/work/.local/share/chezmoi/claude-sandbox/entrypoint.sh)",
+      "Bash(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest)"
     ]
   }
 }

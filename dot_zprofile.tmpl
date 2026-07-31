@@ -28,14 +28,14 @@ export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 # Rust / cargo
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-
-# node, nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 {{- end }}
 
 {{- if eq .profile "work" }}
+
+# node, nvm (installed by run_onchange_install-nvm.sh)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 # Task list (Tuxedo)
 export TODO_DIR="${XDG_DATA_HOME}/tuxedo"
