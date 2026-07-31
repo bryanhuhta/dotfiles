@@ -18,7 +18,23 @@ cask "ghostty" # Terminal emulator
 
 {{ if eq .profile "personal" -}}
 # Personal tools
-cask "gnucash" # Double-entry accounting
+cask "gnucash"     # Double-entry accounting
+
+# Development tools
+cask "claude-code" # Claude Code
+brew "gh"          # GitHub cli
+brew "go"          # go programming language
+cask "orbstack"    # Docker engine and cli (docker, buildx, compose, credential helper)
+brew "zig"         # Zig programming language
+cask "zed"         # GUI code editor
+
+# Productivity tools
+cask "rectangle"   # Window manager
+
+# Neovim dependencies
+brew "gopls"       # Go language server
+brew "jdtls"       # Java language server
+brew "zls"         # Zig language server
 {{- end }}
 
 {{ if eq .profile "work" -}}
@@ -67,7 +83,6 @@ cask "slack"                    # Communication tool
 brew "gopls"                    # Go language server
 brew "jdtls"                    # Java language server
 brew "zls"                      # Zig language server
-
 
 tap "agavra/tap"                # git review TUI
 brew "agavra/tap/tuicr"
