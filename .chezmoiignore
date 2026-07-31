@@ -31,6 +31,7 @@ zed_settings.json
 Library/Containers/app.cyan.markedit/**
 
 # work-only scripts
+.local/bin/p
 .local/bin/sso
 .local/bin/mermaid
 .local/bin/ts2date

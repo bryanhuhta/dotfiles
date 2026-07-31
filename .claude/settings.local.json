@@ -32,7 +32,12 @@
       "Read(//tmp/**)",
       "Bash(brew autoremove *)",
       "Read(//Users/work/Library/Containers/app.cyan.markedit/Data/Documents/**)",
-      "Read(//Users/work/Library/Containers/app.cyan.markedit/Data/Documents/scripts/**)"
+      "Read(//Users/work/Library/Containers/app.cyan.markedit/Data/Documents/scripts/**)",
+      "Bash(ssh -T git@github.com)",
+      "Bash(ssh-add -l)",
+      "Read(//Users/work/.ssh/**)",
+      "Bash(SSH_AUTH_SOCK='/Users/work/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock' ssh-add -l)",
+      "Read(//Users/work/Library/Group Containers/2BUA8C4S2C.com.1password/t/**)"
     ]
   }
 }
