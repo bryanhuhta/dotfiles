@@ -51,33 +51,23 @@ Secrets are never stored in this repository. Scripts read them from the
 macOS Keychain at runtime. This table is the authoritative list — when
 adding a script that reads a new Keychain item, add it here.
 
-| Keychain item             | Contents                                          | Used by                                     |
-|---------------------------|---------------------------------------------------|---------------------------------------------|
-| `Claude Code`             | Claude Code credential (managed by Claude Code)   | `sandbox` — passed as `ANTHROPIC_API_KEY`   |
-| `Claude Code-credentials` | MCP OAuth tokens (managed by Claude Code)         | `sandbox` — passed as `CLAUDE_CREDENTIALS`  |
-| `gcx-sandbox`             | Grafana service-account token (`glsa_...`)        | `sandbox` — passed as `GRAFANA_TOKEN`       |
+| Keychain item             | Contents                                              | Used by                                     |
+|---------------------------|-------------------------------------------------------|---------------------------------------------|
+| `Claude Code-credentials` | Claude OAuth + MCP OAuth tokens (managed by Claude Code) | `sandbox` — passed as `CLAUDE_CREDENTIALS`  |
+| `gcx-sandbox`             | Grafana service-account token (`glsa_...`)            | `sandbox` — passed as `GRAFANA_TOKEN`       |
 
 The `sandbox` script also forwards a GitHub token, but that is managed by
 the `gh` CLI (rotate with `gh auth login`), not the Keychain.
 
-### Rotating `Claude Code`
-
-This item is created and updated by Claude Code itself. Re-authenticate to
-write a fresh credential:
-
-```sh
-claude auth login
-```
-
-Revoke the old credential from the Anthropic console (API keys) or your
-claude.ai account settings.
-
 ### Rotating `Claude Code-credentials`
 
-This item holds OAuth tokens for plugin MCP servers (currently Slack) and
-is created and updated by Claude Code itself. To refresh, reconnect the
-server on the host: run `/mcp` inside Claude Code and re-authenticate the
-Slack server. Revoke old grants from the Slack workspace's app settings.
+This item holds the Claude Code OAuth tokens (enterprise login) plus OAuth
+tokens for plugin MCP servers (currently Slack), and is created and updated
+by Claude Code itself. To refresh the Claude login, run `claude` and
+re-authenticate (`/login`); revoke old sessions from your claude.ai account
+settings. To refresh MCP tokens, run `/mcp` inside Claude Code and
+re-authenticate the Slack server; revoke old grants from the Slack
+workspace's app settings.
 
 ### Rotating `gcx-sandbox`
 

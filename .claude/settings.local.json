@@ -37,7 +37,12 @@
       "Bash(ssh-add -l)",
       "Read(//Users/work/.ssh/**)",
       "Bash(SSH_AUTH_SOCK='/Users/work/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock' ssh-add -l)",
-      "Read(//Users/work/Library/Group Containers/2BUA8C4S2C.com.1password/t/**)"
+      "Read(//Users/work/Library/Group Containers/2BUA8C4S2C.com.1password/t/**)",
+      "Bash(command -v sandbox)",
+      "Read(//Users/work/.local/bin/**)",
+      "Bash(security find-generic-password *)",
+      "Bash(bash -n /Users/work/.local/share/chezmoi/dot_local/bin/executable_sandbox)",
+      "Bash(bash -n /Users/work/.local/share/chezmoi/claude-sandbox/entrypoint.sh)"
     ]
   }
 }
