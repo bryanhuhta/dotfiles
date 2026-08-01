@@ -9,20 +9,16 @@ brew "the_silver_searcher" # ag (better version of grep)
 brew "tree"                # Display directories as trees
 brew "tree-sitter-cli"     # Compiles nvim-treesitter grammars
 
-{{ if or (eq .profile "personal") (eq .profile "work") -}}
-# macOS only (casks are not supported by linuxbrew)
-brew "git"     # Version control system
-brew "git-lfs" # Large file storage (gitconfig declares required lfs filters)
-cask "ghostty" # Terminal emulator
-{{- end }}
-
-{{ if eq .profile "personal" -}}
+{{ if eq .profile "personal" }}
 # Personal tools
 cask "gnucash"     # Double-entry accounting
 
 # Development tools
 cask "claude-code" # Claude Code
 brew "gh"          # GitHub cli
+cask "ghostty"     # Terminal emulator
+brew "git"         # Version control system
+brew "git-lfs"     # Large file storage (gitconfig declares required lfs filters)
 brew "go"          # go programming language
 cask "orbstack"    # Docker engine and cli (docker, buildx, compose, credential helper)
 brew "zig"         # Zig programming language
@@ -35,7 +31,21 @@ cask "rectangle"   # Window manager
 brew "gopls"       # Go language server
 brew "jdtls"       # Java language server
 brew "zls"         # Zig language server
-{{- end }}
+{{ end }}
+
+{{ if eq .profile "personal-bazzite" }}
+# Development tools
+cask "claude-code" # Claude Code
+brew "gh"          # GitHub cli
+brew "git"         # Version control system
+brew "git-lfs"     # Large file storage (gitconfig declares required lfs filters)
+brew "go"          # go programming language
+brew "zig"         # Zig programming language
+
+# Neovim dependencies
+brew "gopls"       # Go language server
+brew "zls"         # Zig language server
+{{ end }}
 
 {{ if eq .profile "work" -}}
 # Work tools
@@ -87,3 +97,4 @@ brew "zls"                      # Zig language server
 tap "agavra/tap"                # git review TUI
 brew "agavra/tap/tuicr"
 {{- end }}
+
