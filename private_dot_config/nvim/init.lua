@@ -112,6 +112,16 @@ vim.api.nvim_create_autocmd("FileType", {
   callback = function() pcall(vim.treesitter.start) end,
 })
 
+-- Display tabs as 2 columns in Go files
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "go", "gomod", "gowork", "gosum", "gotmpl" },
+  callback = function()
+    vim.opt_local.tabstop = 2
+    vim.opt_local.shiftwidth = 2
+    vim.opt_local.expandtab = false
+  end,
+})
+
 -- Treesitter-based folding for markdown
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "markdown",
