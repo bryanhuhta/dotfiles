@@ -131,6 +131,16 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+-- Create missing parent directories on save (except for URIs like "scp://")
+vim.api.nvim_create_autocmd({ "BufWritePre", "FileWritePre" }, {
+  callback = function(ev)
+    if ev.match:match("://") then
+      return
+    end
+    vim.fn.mkdir(vim.fn.fnamemodify(ev.match, ":p:h"), "p")
+  end,
+})
+
 -- Format with goimports on save via gopls
 vim.api.nvim_create_autocmd("BufWritePre", {
   pattern = "*.go",
