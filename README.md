@@ -45,6 +45,25 @@ installed by the Brewfile there):
 
 Restart MarkEdit after applying for changes to take effect.
 
+## Node.js (nvm + yarn)
+
+Node tooling is managed by chezmoi on the `personal` and `work` profiles
+(it lives outside the Brewfile because nvm is unsupported under Homebrew
+and brew's `yarn` would drag in brew's own `node`):
+
+- **nvm** is installed as an archive checkout of the pinned release
+  (`nvm.version` in `.chezmoidata.toml`) via `.chezmoiexternal.toml` — not
+  with nvm's `install.sh`, which would edit the chezmoi-managed shell
+  profile. To upgrade, pick a tag from the
+  [releases](https://github.com/nvm-sh/nvm/releases), bump the value, and
+  run `chezmoi apply`.
+- **node** is installed by `run_onchange_after_install-node.sh`, pinned as
+  `node.version` in `.chezmoidata.toml`. Bump the value and run
+  `chezmoi apply` to install the new version and make it the nvm default
+  (old versions are kept; remove them with `nvm uninstall <version>`).
+- **yarn** comes from Corepack (bundled with node), enabled by the same
+  script — there is no separate yarn install.
+
 ## Keychain secrets
 
 Secrets are never stored in this repository. Scripts read them from the

@@ -31,8 +31,11 @@
 [[ssh-keys]]
 vault = "Private"
 
+{{- if eq .profile "work" }}
+
 [[ssh-keys]]
 vault = "Employee"
 
 [[ssh-keys]]
 vault = "Grafana"
+{{- end }}

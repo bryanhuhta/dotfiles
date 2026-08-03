@@ -42,24 +42,3 @@ Library/Containers/app.cyan.markedit/**
 .local/bin/scan
 {{- end }}
 
-{{- if eq .profile "personal-bazzite" }}
-# Bootstrapping a fresh Bazzite (Linux) machine.
-#
-# We start by ignoring EVERYTHING so `chezmoi apply` is a no-op, then port
-# configs over from the "personal"/"everything" sets one at a time by adding
-# negated exceptions below. To port a config, add a `!` line for it (you may
-# also need to un-ignore each parent directory, e.g. `!.config` before
-# `!.config/nvim/**`, due to gitignore-style negation rules).
-*
-# --- ported configs (add exceptions below this line) ---
-!.gitconfig
-!.gitignore_global
-!.zshrc
-!install-zsh.sh
-# oh-my-zsh custom theme (un-ignore each parent level for negation to work)
-!.oh-my-zsh
-!.oh-my-zsh/custom
-!.oh-my-zsh/custom/themes
-!.oh-my-zsh/custom/themes/custom-eastwood.zsh-theme
-# !.config/nvim/**
-{{- end }}

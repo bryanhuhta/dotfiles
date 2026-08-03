@@ -1,3 +1,14 @@
+{{- if or (eq .profile "personal") (eq .profile "work") }}
+# nvm, pinned via .chezmoidata.toml. Installed as an archive checkout rather
+# than nvm's install.sh so nothing mutates the chezmoi-managed shell profile.
+# Deliberately not `exact`: nvm writes installed node versions and aliases
+# into ~/.nvm, and exact would delete them on every apply.
+[".nvm"]
+    type = "archive"
+    url = "https://github.com/nvm-sh/nvm/archive/refs/tags/v{{ .nvm.version }}.tar.gz"
+    stripComponents = 1
+{{- end }}
+
 {{- if eq .profile "work" }}
 # MarkEdit preview extension, pinned via .chezmoidata.toml. The URL embeds the
 # version, so bumping it re-downloads on the next apply. The extension's own
