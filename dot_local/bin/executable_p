@@ -35,8 +35,10 @@ shift
 
 # Environment name -> 1Password item name (Grafana vault)
 case "$name" in
-  dev-001) item="grafanacloud-dev-profiles" ;;
-  ops-002) item="grafanacloud-ops-profiles" ;;
+     dev-001) item="grafanacloud-dev-profiles" ;;
+     ops-002) item="grafanacloud-ops-profiles" ;;
+       bloom) item="grafanacloud-bloom-profiles" ;;
+  bryanhuhta) item="grafanacloud-bryanhuhta-profiles" ;;
   *)
     echo "Error: unknown environment '$name'. Known environments:" >&2
     grep -E '^  [a-z0-9-]+\) item=' "$0" | sed -E 's/^ +([a-z0-9-]+)\).*/  \1/' >&2
