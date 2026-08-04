@@ -28,8 +28,7 @@ alias gfm="git fetch && git merge"
 alias gbomb="git restore --source HEAD --staged --worktree . && git clean -fd"
 
 # Deployment tools
-alias tklocal="${DEPLOY_TOOLS_DIR}/scripts/tanka/tk"
-alias ignore="${DEPLOY_TOOLS_DIR}/scripts/flux/ignore.sh"
+alias ignore="${DEPLOY_TOOLS_DIR}/scripts/flux/ignore.sh" --actor "Bryan Huhta"
 alias vaultd="VAULT_INSTANCE=dev GRAFANA_TEAM=pyroscope ${DEPLOY_TOOLS_DIR}/scripts/vault/vault-token"
 alias vaultp="VAULT_INSTANCE=prod GRAFANA_TEAM=pyroscope ${DEPLOY_TOOLS_DIR}/scripts/vault/vault-token"
 
