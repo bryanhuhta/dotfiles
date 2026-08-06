@@ -4,7 +4,6 @@
       "Bash(gcx *)"
     ]
   },
-  "model": "claude-fable-5[1m]",
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "slack@claude-plugins-official": true
