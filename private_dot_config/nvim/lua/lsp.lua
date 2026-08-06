@@ -138,7 +138,10 @@ vim.lsp.enable("gopls")
 vim.lsp.config("sourcekit", {
   cmd = { "xcrun", "sourcekit-lsp" },
   filetypes = { "swift" },
-  root_markers = { "Package.swift", "*.xcodeproj", "*.xcworkspace", ".git" },
+  -- root_markers are matched literally by vim.fs.find, so globs like "*.xcodeproj"
+  -- never match. buildServer.json (from xcode-build-server) comes first so it wins
+  -- over .git when both are present.
+  root_markers = { "buildServer.json", "Package.swift", ".git" },
 })
 vim.lsp.enable("sourcekit")
 
