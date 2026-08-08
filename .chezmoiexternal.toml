@@ -9,7 +9,7 @@
     stripComponents = 1
 {{- end }}
 
-{{- if eq .profile "work" }}
+{{- if or (eq .profile "personal") (eq .profile "work") }}
 # MarkEdit preview extension, pinned via .chezmoidata.toml. The URL embeds the
 # version, so bumping it re-downloads on the next apply. The extension's own
 # update checks are disabled in MarkEdit's settings.json.

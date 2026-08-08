@@ -25,11 +25,14 @@ zed_settings.json
 .local/bin/pico8
 {{- end }}
 
-{{- if ne .profile "work" }}
-# MarkEdit is only installed on the work profile (see dot_Brewfile.tmpl); this
-# also skips the markedit-preview external in .chezmoiexternal.toml
+{{- if and (ne .profile "personal") (ne .profile "work") }}
+# MarkEdit is only installed on the personal and work profiles (see
+# dot_Brewfile.tmpl); this also skips the markedit-preview external in
+# .chezmoiexternal.toml
 Library/Containers/app.cyan.markedit/**
+{{- end }}
 
+{{- if ne .profile "work" }}
 # work-only scripts
 .local/bin/p
 .local/bin/sso
