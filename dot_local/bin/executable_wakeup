@@ -1,0 +1,56 @@
+#!/bin/bash
+## Keep the display awake by running caffeinate in the background.
+##
+## With no arguments the display stays awake until the caffeinate process is
+## killed. Pass a duration to stop automatically after it elapses.
+##
+## Durations are a number with an optional unit suffix: s (seconds, default),
+## m (minutes), or h (hours).
+##
+## Usage: wakeup [-h] [duration]
+##   -h    Print this help message
+##
+## Examples:
+##   wakeup          Stay awake indefinitely
+##   wakeup 90       Stay awake for 90 seconds
+##   wakeup 45m      Stay awake for 45 minutes
+##   wakeup 2h       Stay awake for 2 hours
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+duration="${1:-}"
+seconds=""
+
+if [[ -n "$duration" ]]; then
+  if [[ ! "$duration" =~ ^([0-9]+)([smh]?)$ ]]; then
+    echo "wakeup: invalid duration '$duration' (expected e.g. 90, 45m, 2h)" >&2
+    exit 1
+  fi
+
+  value="${BASH_REMATCH[1]}"
+  unit="${BASH_REMATCH[2]:-s}"
+
+  case "$unit" in
+    s) seconds=$((value)) ;;
+    m) seconds=$((value * 60)) ;;
+    h) seconds=$((value * 3600)) ;;
+  esac
+
+  if [[ "$seconds" -eq 0 ]]; then
+    echo "wakeup: duration must be greater than zero" >&2
+    exit 1
+  fi
+fi
+
+if [[ -n "$seconds" ]]; then
+  nohup caffeinate -d -t "$seconds" >/dev/null 2>&1 &
+  echo "Display awake for ${seconds}s (pid $!)"
+else
+  nohup caffeinate -d >/dev/null 2>&1 &
+  echo "Display awake until killed (pid $!)"
+fi
