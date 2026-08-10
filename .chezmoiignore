@@ -20,28 +20,39 @@ claude-home/
 # Zed
 zed_settings.json
 
-{{- if ne .profile "personal" }}
-# personal-only scripts
-.local/bin/pico8
-{{- end }}
-
-{{- if and (ne .profile "personal") (ne .profile "work") }}
-# MarkEdit is only installed on the personal and work profiles (see
-# dot_Brewfile.tmpl); this also skips the markedit-preview external in
-# .chezmoiexternal.toml
-Library/Containers/app.cyan.markedit/**
-{{- end }}
-
-{{- if ne .profile "work" }}
-# work-only scripts
+{{- if eq .profile "personal" }}
+# Not loaded on the personal profile
 .local/bin/p
 .local/bin/sso
 .local/bin/mermaid
 .local/bin/ts2date
 .local/bin/gifify
-.local/bin/movtomp4
 .local/bin/slackify
 .local/bin/jpegify
 .local/bin/scan
+{{- end }}
+
+{{- if eq .profile "work" }}
+# Not loaded on the work profile
+.local/bin/pico8
+{{- end }}
+
+{{- if eq .profile "personal-bazzite" }}
+# Not loaded on the personal-bazzite profile
+.local/bin/pico8
+.local/bin/movtomp4
+.local/bin/p
+.local/bin/sso
+.local/bin/mermaid
+.local/bin/ts2date
+.local/bin/gifify
+.local/bin/slackify
+.local/bin/jpegify
+.local/bin/scan
+
+# MarkEdit is only installed on the personal and work profiles (see
+# dot_Brewfile.tmpl); this also skips the markedit-preview external in
+# .chezmoiexternal.toml
+Library/Containers/app.cyan.markedit/**
 {{- end }}
 
