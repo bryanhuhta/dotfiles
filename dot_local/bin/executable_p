@@ -9,18 +9,42 @@
 ##   read field      ->  PROFILECLI_PASSWORD
 ##   tenant field    ->  PROFILECLI_TENANT_ID  (optional)
 ##
+## The special environment "local" fetches no secrets from 1Password; it
+## runs profilecli as-is, picking up whatever PROFILECLI_* vars (if any)
+## are already in your environment.
+##
 ## Everything after the environment name is passed through to profilecli.
 ##
 ## Usage: p [-h] <environment> [profilecli args...]
-##   -h    Print this help message
+##   -h    Print this help message, including available environments
 ##
 ## Examples:
-##   p profiles-ops-002 query series
+##   p ops-002 query series
+##   p local query series
 
 set -euo pipefail
 
+# Environment name -> 1Password item name (Grafana vault).
+# To add an environment, add a line below.
+# (source: chezmoi edit ~/.local/bin/p)
+environments=$(cat <<'EOF'
+dev-001     grafanacloud-dev-profiles
+ops-002     grafanacloud-ops-profiles
+bloom       grafanacloud-bloom-profiles
+bryanhuhta  grafanacloud-bryanhuhta-profiles
+EOF
+)
+
+list_environments() {
+  echo "  local (no 1Password lookup)"
+  awk '{ print "  " $1 }' <<<"$environments"
+}
+
 if [[ "${1:-}" == "-h" ]]; then
   grep '^##' "$0" | sed -E 's/^## ?//'
+  echo
+  echo "Available environments:"
+  list_environments
   exit 0
 fi
 
@@ -33,21 +57,17 @@ fi
 name="$1"
 shift
 
-# Environment name -> 1Password item name (Grafana vault)
-case "$name" in
-     dev-001) item="grafanacloud-dev-profiles" ;;
-     ops-002) item="grafanacloud-ops-profiles" ;;
-       bloom) item="grafanacloud-bloom-profiles" ;;
-  bryanhuhta) item="grafanacloud-bryanhuhta-profiles" ;;
-  *)
-    echo "Error: unknown environment '$name'. Known environments:" >&2
-    grep -E '^  [a-z0-9-]+\) item=' "$0" | sed -E 's/^ +([a-z0-9-]+)\).*/  \1/' >&2
-    echo >&2
-    echo "To add an environment, edit the case statement in $0" >&2
-    echo "(source: chezmoi edit ~/.local/bin/p)" >&2
-    exit 1
-    ;;
-esac
+if [[ "$name" == "local" ]]; then
+  exec profilecli "$@"
+fi
+
+item="$(awk -v n="$name" '$1 == n { print $2 }' <<<"$environments")"
+
+if [[ -z "$item" ]]; then
+  echo "Error: unknown environment '$name'. Known environments:" >&2
+  list_environments >&2
+  exit 1
+fi
 
 item_json="$(op item get --vault Grafana "$item" --format json)"
 
