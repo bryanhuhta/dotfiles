@@ -86,7 +86,7 @@ case "${1:-}" in
 esac
 
 duration="${1:-}"
-seconds=""
+duration_seconds=""
 
 if [[ -n "$duration" ]]; then
   if [[ ! "$duration" =~ ^([0-9]+)([smh]?)$ ]]; then
@@ -98,12 +98,12 @@ if [[ -n "$duration" ]]; then
   unit="${BASH_REMATCH[2]:-s}"
 
   case "$unit" in
-    s) seconds=$((value)) ;;
-    m) seconds=$((value * 60)) ;;
-    h) seconds=$((value * 3600)) ;;
+    s) duration_seconds=$((value)) ;;
+    m) duration_seconds=$((value * 60)) ;;
+    h) duration_seconds=$((value * 3600)) ;;
   esac
 
-  if [[ "$seconds" -eq 0 ]]; then
+  if [[ "$duration_seconds" -eq 0 ]]; then
     echo "wakeup: duration must be greater than zero" >&2
     exit 1
   fi
@@ -115,11 +115,11 @@ if [[ -n "$pid" ]]; then
   echo "Replaced existing wakeup session (pid $pid)"
 fi
 
-if [[ -n "$seconds" ]]; then
-  nohup caffeinate -d -t "$seconds" >/dev/null 2>&1 &
+if [[ -n "$duration_seconds" ]]; then
+  nohup caffeinate -d -t "$duration_seconds" >/dev/null 2>&1 &
   new_pid=$!
-  echo "$new_pid $(date +%s) $seconds" > "$state_file"
-  echo "Display awake for ${seconds}s (pid $new_pid)"
+  echo "$new_pid $(date +%s) $duration_seconds" > "$state_file"
+  echo "Display awake for ${duration_seconds}s (pid $new_pid)"
 else
   nohup caffeinate -d >/dev/null 2>&1 &
   new_pid=$!
