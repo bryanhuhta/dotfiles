@@ -61,8 +61,7 @@ vim.keymap.set("n", "<C-E>", ":Lexplore %:h<CR>:vertical resize 40<CR>", { silen
 vim.keymap.set("n", "<C-S-E>", ":Lexplore<CR>:vertical resize 40<CR>", { silent = true, desc = "Toggle file explorer (cwd)" })
 vim.keymap.set("n", "<leader>r", ":set relativenumber!<CR>", { desc = "Toggle relative line numbers" })
 vim.keymap.set("n", "<Leader>w", ":%s/\\s\\+$//e<CR>", { desc = "Trim trailing whitespace" })
-vim.keymap.set("n", "<CR>", "m`o<Esc>``", { desc = "Insert blank line below cursor" })
-vim.keymap.set("n", "<S-CR>", "m`O<Esc>``", { desc = "Insert blank line above cursor" })
+vim.keymap.set("n", "<S-CR>", "m`o<Esc>``", { desc = "Insert blank line below cursor" })
 
 local function reflow_selection()
   local saved_tw = vim.bo.textwidth
