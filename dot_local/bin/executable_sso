@@ -1,12 +1,14 @@
 #!/bin/bash
-## Authenticate via gcloud and AWS SSO for a given environment.
+## Authenticate via Tailscale and cloud (AWS/GCP) SSO for a given
+## environment, using deployment_tools' setup-context.
 ##
-## Checks if gcloud auth is active before prompting login. Use -f
-## to force re-authentication. Requires DEPLOY_TOOLS_DIR to be set.
+## setup-context checks existing credentials itself before prompting for
+## login. Use -f to force AWS SSO re-authentication. Requires
+## DEPLOY_TOOLS_DIR to be set.
 ##
 ## Usage: sso [-h] [-f|--force] [dev|ops|prod]
 ##   -h, --help     Print this help message
-##   -f, --force    Force gcloud re-authentication
+##   -f, --force    Force AWS SSO re-authentication
 ##   dev            Authenticate to the dev environment (default)
 ##   ops            Authenticate to the ops environment
 ##   prod           Authenticate to the prod environment
@@ -49,20 +51,12 @@ cd "${DEPLOY_TOOLS_DIR}" || {
   exit 1
 }
 
+# --kubeconfig is specified explicitly because setup-context can't handle
+# multiple paths in $KUBECONFIG.
+args=(--kubeconfig="/Users/work/.kube/config" --cloud-sso "--${env}")
+
 if $force; then
-  gcloud auth login
-elif ! gcloud auth print-access-token >/dev/null 2>&1; then
-  gcloud auth login
+  args+=(--aws-reset-sso)
 fi
 
-case "$env" in
-  dev)
-    ./scripts/sso/aws.sh dev
-    ;;
-  ops)
-    ./scripts/sso/aws.sh ops
-    ;;
-  prod)
-    ./scripts/sso/aws.sh prod
-    ;;
-esac
+./setup-context "${args[@]}"
