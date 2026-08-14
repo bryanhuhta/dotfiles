@@ -11,7 +11,7 @@ return {
         end,
       },
     })
-    vim.keymap.set("n", "<leader>f", function() fzf.git_files({ prompt = "git > ", cmd = "git ls-files --cached --others --exclude-standard" }) end, { silent = true, desc = "Fuzzy find git files" })
+    vim.keymap.set("n", "<leader>f", function() fzf.git_files({ prompt = "git > ", cmd = "git ls-files --cached --others --exclude-standard -- . ':!gen'" }) end, { silent = true, desc = "Fuzzy find git files" })
     vim.keymap.set("n", "<leader>F", fzf.files, { silent = true, desc = "Fuzzy find files" })
     vim.keymap.set("n", "<leader>b", fzf.buffers, { silent = true, desc = "Fuzzy find buffers" })
   end,
