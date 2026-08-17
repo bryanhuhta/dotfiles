@@ -1,0 +1,73 @@
+#!/bin/bash
+## Aggressively clean up Docker: stopped containers, unused images,
+## volumes, networks, and build cache.
+##
+## Shows what will be removed and prompts before deleting. Uses
+## `docker system prune -a --volumes` under the hood.
+##
+## work only — see .chezmoiignore.
+##
+## Usage: docker-clean [-h] [-y]
+##   -h    Print this help message
+##   -y    Skip confirmation prompt
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+skip_confirm=0
+if [[ "${1:-}" == "-y" ]]; then
+  skip_confirm=1
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  echo "error: docker daemon is not running or not reachable" >&2
+  exit 1
+fi
+
+echo "Current Docker disk usage:"
+docker system df
+echo
+
+if [[ "$skip_confirm" -eq 0 ]]; then
+  echo "This will remove:"
+  echo "  - all stopped containers"
+  echo "  - all networks not used by at least one container"
+  echo "  - all volumes not used by at least one container"
+  echo "  - all images without at least one container associated to them"
+  echo "  - all build cache"
+  echo
+  read -r -p "Continue? [y/N] " reply
+  case "$reply" in
+    [yY]|[yY][eE][sS]) ;;
+    *) echo "aborted."; exit 0 ;;
+  esac
+fi
+
+count() { wc -l | tr -d ' '; }
+
+containers_before=$(docker ps -aq | count)
+images_before=$(docker images -aq | count)
+volumes_before=$(docker volume ls -q | count)
+networks_before=$(docker network ls -q | count)
+
+prune_output=$(docker system prune -a --volumes --force 2>&1)
+echo "$prune_output"
+
+containers_after=$(docker ps -aq | count)
+images_after=$(docker images -aq | count)
+volumes_after=$(docker volume ls -q | count)
+networks_after=$(docker network ls -q | count)
+
+space=$(printf '%s\n' "$prune_output" | awk -F': ' '/^Total reclaimed space:/{print $2}')
+
+echo
+echo "Cleanup summary:"
+printf '  %-11s %d removed\n' 'containers:' "$((containers_before - containers_after))"
+printf '  %-11s %d removed\n' 'images:'     "$((images_before - images_after))"
+printf '  %-11s %d removed\n' 'volumes:'    "$((volumes_before - volumes_after))"
+printf '  %-11s %d removed\n' 'networks:'   "$((networks_before - networks_after))"
+printf '  %-11s %s reclaimed\n' 'space:'    "${space:-0B}"

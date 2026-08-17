@@ -1,0 +1,26 @@
+#!/bin/bash
+## Run a command with /tmp as its working directory, leaving the current
+## shell's directory untouched.
+##
+## Usage: shat [-h] <command> [args...]
+##   -h    Print this help message
+##
+## Examples:
+##   shat claude
+##   shat ls -lah
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+if [[ $# -lt 1 ]]; then
+  echo "Error: missing command" >&2
+  echo "Usage: shat [-h] <command> [args...]" >&2
+  exit 1
+fi
+
+cd /tmp
+exec "$@"

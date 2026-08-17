@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inside the Grafana Alerting Notification Pipeline</title>
+<link rel="stylesheet" href="../explain.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-header">
+  <p class="kicker">Architecture Walkthrough</p>
+  <h1>The Grafana Alerting Notification Pipeline</h1>
+  <p class="dek">An alert rule that transitions to Alerting produces a Slack message, a PagerDuty page, or a routed webhook. This document describes where the multi-org Alertmanager spends its processing time in that path.</p>
+  <p class="byline">Generated from a walkthrough of <code>pkg/services/ngalert</code><span class="sep">&middot;</span>branch <code>main</code> @ <code>a3f9c21</code><span class="sep">&middot;</span>2026-08-13</p>
+</header>
+
+<nav class="toc">
+  <p class="toc-title">Contents</p>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#component-map">Component map</a>
+      <ol>
+        <li><a href="#per-org-isolation">Per-org isolation</a></li>
+      </ol>
+    </li>
+    <li><a href="#evaluation-to-dispatch">From evaluation to dispatch</a></li>
+    <li><a href="#routing">How an alert is routed</a></li>
+    <li><a href="#timeout-fix">A slow webhook blocked the notification cycle</a></li>
+    <li><a href="#time-budget">Time distribution in a notification cycle</a></li>
+    <li><a href="#before-after">Single-tenant versus multi-org: a comparison</a></li>
+    <li><a href="#trace">Sample notification trace</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>When an alert rule transitions to <code>Alerting</code>, five internal components decide in sequence whether a notification is sent. This document describes that path in full. The evaluation loop detects the state change. The per-organization Alertmanager owns routing for that tenant. The dispatch machinery performs matching, inhibition, silencing, and deduplication. Together these steps turn one state change into zero or more outbound notifications.</p>
+  <p>The component names below (<code class="ref-blue">MultiOrgAlertmanager</code>, <code class="ref-red">Dispatcher</code>, <code class="ref-teal">Inhibitor</code>, <code class="ref-amber">Silencer</code>, <code class="ref-green">NotificationLog</code>, <code class="ref-purple">Scheduler</code>) use the same color in every diagram and in the prose. This coloring allows a single component to be traced through the entire pipeline.</p>
+  <div class="admonition note">
+    <p>This document describes the alerting stack as implemented today in <code>pkg/services/ngalert</code>. That package vendors and extends the upstream Prometheus Alertmanager packages (<code>dispatch</code>, <code>inhibit</code>, <code>silence</code>, <code>nflog</code>) to support multiple tenants. If a reader is familiar with vanilla Alertmanager, the internals described here will be recognizable. The tenancy layer above those packages is specific to Grafana.</p>
+  </div>
+</section>
+
+<section id="component-map">
+  <h2>Component map</h2>
+  <p>Each Grafana organization receives its own isolated Alertmanager instance. A single <code class="ref-blue">MultiOrgAlertmanager</code> creates and supervises every instance. Inside each per-organization instance, four components cooperate to turn a batch of firing alerts into notifications:</p>
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch ref-purple"></span>Scheduler</span>
+    <span class="legend-item"><span class="legend-swatch ref-blue"></span>MultiOrgAlertmanager</span>
+    <span class="legend-item"><span class="legend-swatch ref-red"></span>Dispatcher</span>
+    <span class="legend-item"><span class="legend-swatch ref-teal"></span>Inhibitor</span>
+    <span class="legend-item"><span class="legend-swatch ref-amber"></span>Silencer</span>
+    <span class="legend-item"><span class="legend-swatch ref-green"></span>NotificationLog</span>
+  </div>
+
+  <ul class="tree">
+    <li><span class="tree-node ref-blue">MultiOrgAlertmanager</span>
+      <ul>
+        <li><span class="tree-node ref-red">Dispatcher</span></li>
+        <li><span class="tree-node ref-teal">Inhibitor</span></li>
+        <li><span class="tree-node ref-amber">Silencer</span></li>
+        <li><span class="tree-node ref-green">NotificationLog</span></li>
+      </ul>
+    </li>
+  </ul>
+
+  <p>The <code class="ref-red">Dispatcher</code> owns the route tree and decides which receivers a group of alerts should reach. Before it sends a notification, it consults the <code class="ref-teal">Inhibitor</code> to check whether a higher-severity alert already suppresses this alert. It also consults the <code class="ref-amber">Silencer</code> to check whether the label set has been explicitly muted. After a notify attempt, the outcome (success, failure, or already sent) is recorded in the <code class="ref-green">NotificationLog</code>. This record is what makes retries and repeat intervals idempotent.</p>
+
+  <h3 id="per-org-isolation">Per-org isolation</h3>
+  <p>Each of the four components is instantiated once per organization and holds no cross-tenant state. The function <code>newAlertmanager</code> in <code>alertmanager.go</code> constructs a fresh <code class="ref-red">Dispatcher</code>, <code class="ref-teal">Inhibitor</code>, <code class="ref-amber">Silencer</code>, and <code class="ref-green">NotificationLog</code> for each organization. Each set is backed by that organization's own BoltDB-style key-value store file on disk. The <code class="ref-blue">MultiOrgAlertmanager</code> performs only lifecycle management. It starts a new organization's Alertmanager on the first alert rule. It synchronizes configuration on change. It stops an organization's Alertmanager when the organization is deleted.</p>
+</section>
+
+<section id="evaluation-to-dispatch">
+  <h2>From evaluation to dispatch</h2>
+  <p>At runtime, a single evaluation tick moves through five hops before a notification is sent externally:</p>
+
+  <div class="flow">
+    <span class="flow-step ref-purple">Scheduler</span><span class="flow-arrow">&rarr;</span>
+    <span class="flow-step ref-blue">MultiOrgAlertmanager</span><span class="flow-arrow">&rarr;</span>
+    <span class="flow-step ref-red">Dispatcher</span><span class="flow-arrow">&rarr;</span>
+    <span class="flow-step ref-green">NotificationLog</span><span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Integrations</span>
+  </div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch ref-purple"></span>Scheduler</span>
+    <span class="legend-item"><span class="legend-swatch ref-blue"></span>MultiOrgAlertmanager</span>
+    <span class="legend-item"><span class="legend-swatch ref-red"></span>Dispatcher</span>
+    <span class="legend-item"><span class="legend-swatch ref-green"></span>NotificationLog</span>
+    <span class="legend-item"><span class="legend-swatch"></span>Integrations (uncolored; described below)</span>
+  </div>
+
+  <p>The <code class="ref-purple">Scheduler</code> ticks at every base interval (10 seconds by default) and calls <code>ruleEval.Evaluate</code> against every rule due for evaluation. A rule that transitions to <code>Alerting</code> or <code>Resolved</code> is handed to <code>MultiOrgAlertmanager.ProcessEvalResults</code>. That function looks up the correct per-organization Alertmanager and forwards the alert. The <code class="ref-red">Dispatcher</code> then takes over. It groups the alert with any others that share the same <code>group_by</code> labels. It waits out <code>group_wait</code>. It matches the group against the route tree. A successful match writes an entry to the <code class="ref-green">NotificationLog</code> before <code>Integrations</code> sends anything over the wire. <code>Integrations</code> refers to the concrete receiver implementations for Slack, PagerDuty, email, and generic webhooks.</p>
+
+  <div class="stat-group">
+    <span class="stat-pill">6 evaluation ticks / min</span>
+    <span class="stat-pill stat-pill-add">+312 alerts routed</span>
+    <span class="stat-pill stat-pill-remove">&minus;58 suppressed by <code class="ref-teal">Inhibitor</code></span>
+    <span class="stat-pill">4 active receivers</span>
+  </div>
+</section>
+
+<section id="routing">
+  <h2>How an alert is routed</h2>
+  <p>The <code class="ref-red">Dispatcher</code> matches alerts against a route tree in depth-first order. It stops at the first matching node unless that node sets <code>continue: true</code>. A payments-team alert with <code>severity="critical"</code> matches the top-level PagerDuty route and stops there. This prevents a critical payments outage from being silently double-routed to a low-priority Slack channel. A non-critical payments alert falls through to the team-scoped Slack route instead:</p>
+
+  <div class="code-block-title">pkg/services/ngalert/notifier/alertmanager.go: default route tree</div>
+  <pre class="code-block"><code><span class="line">route:</span>
+<span class="line">  receiver: default-email</span>
+<span class="line">  group_by: ['alertname', 'grafana_folder']</span>
+<span class="line">  group_wait: 30s</span>
+<span class="line">  group_interval: 5m</span>
+<span class="line">  repeat_interval: 4h</span>
+<span class="line">  routes:</span>
+<span class="line">    - matchers:</span>
+<span class="line">        - severity="critical"</span>
+<span class="line">      receiver: pagerduty-oncall</span>
+<span class="line">      continue: false</span>
+<span class="line">    - matchers:</span>
+<span class="line">        - team="payments"</span>
+<span class="line">      receiver: payments-slack</span>
+<span class="line">      continue: true</span></code></pre>
+
+  <p>That last <code>continue: true</code> is deliberate. The payments team requires a copy of every alert forwarded to a shared observability webhook further down the tree, regardless of severity. Routing does not stop after the Slack match for this reason.</p>
+
+  <div class="admonition important">
+    <p>Route matching operates on the labels attached to the alert instance, not on the alert rule definition. If a rule's query returns multiple series, then each series becomes its own alert with its own label set. Each such alert can be routed differently. This behavior is a common source of confusion: a rule may show a receiver configured in the UI, while individual alert instances still page the wrong team.</p>
+  </div>
+</section>
+
+<section id="timeout-fix">
+  <h2>A slow webhook blocked the notification cycle</h2>
+  <p>The <code class="ref-red">Dispatcher</code> notifies each receiver in a group synchronously before moving to the next group. Because of this, a single failing <code>Integrations</code> target could stall the entire batch. <code>WebhookNotifier.Notify</code> called <code>SendWebhook</code> with whatever context it was handed, usually the request-scoped context with no deadline of its own. A webhook endpoint that accepted the TCP connection and then never responded would hang the goroutine indefinitely.</p>
+
+  <div class="admonition warning">
+    <p>Before the fix below was applied, one team's misconfigured internal webhook receiver, sitting behind a load balancer with no read timeout, caused a 20-minute backlog of unrelated Slack and email notifications during an incident. This delay occurred at the exact time prompt alert delivery mattered most.</p>
+  </div>
+
+  <div class="code-block-title">pkg/services/ngalert/notifier/channels/webhook.go</div>
+  <div class="diff-split">
+    <div class="diff-pane diff-pane-head">
+      <p class="diff-pane-label">HEAD</p>
+      <pre class="code-block"><code><span class="line">func (wn *WebhookNotifier) Notify(ctx context.Context, as ...*types.Alert) (bool, error) {</span>
+<span class="line line-remove">    resp, err := wn.ns.SendWebhook(ctx, wn.buildRequest(as))</span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-focus">    if err != nil {</span>
+<span class="line">        return true, fmt.Errorf("send webhook: %w", err)</span>
+<span class="line">    }</span>
+<span class="line">    defer resp.Body.Close()</span>
+<span class="line">    return resp.StatusCode/100 == 2, nil</span>
+<span class="line">}</span></code></pre>
+    </div>
+    <div class="diff-pane diff-pane-new">
+      <p class="diff-pane-label">NEW</p>
+      <pre class="code-block"><code><span class="line">func (wn *WebhookNotifier) Notify(ctx context.Context, as ...*types.Alert) (bool, error) {</span>
+<span class="line line-empty"></span>
+<span class="line line-add">    ctx, cancel := context.WithTimeout(ctx, wn.settings.Timeout)</span>
+<span class="line line-add">    defer cancel()</span>
+<span class="line line-add">    resp, err := wn.ns.SendWebhook(ctx, wn.buildRequest(as))</span>
+<span class="line line-focus">    if err != nil {</span>
+<span class="line">        return true, fmt.Errorf("send webhook: %w", err)</span>
+<span class="line">    }</span>
+<span class="line">    defer resp.Body.Close()</span>
+<span class="line">    return resp.StatusCode/100 == 2, nil</span>
+<span class="line">}</span></code></pre>
+    </div>
+  </div>
+
+  <p>The retry flag now returns <code>true</code> correctly on timeout as well. As a result, an endpoint that is slow but eventually successful is retried on the next <code>group_interval</code> instead of being marked as permanently failed.</p>
+
+  <div class="admonition danger">
+    <p>If <code>wn.settings.Timeout</code> is raised for an integration, check it against <code>group_interval</code>. A timeout longer than the group interval can let two notify attempts for the same group overlap. The <code class="ref-green">NotificationLog</code> deduplicates on group fingerprint plus receiver, not on in-flight request identity. Overlapping attempts can therefore result in duplicate pages to the same on-call engineer.</p>
+  </div>
+</section>
+
+<section id="time-budget">
+  <h2>Time distribution in a notification cycle</h2>
+  <p>A CPU profile taken across a busy organization (roughly 4,000 active alert instances) shows the two largest consumers of a notify cycle: the <code class="ref-red">Dispatcher</code>'s route matching and the <code class="ref-green">NotificationLog</code>'s dedupe lookups. Together these two account for over half the wall-clock time:</p>
+
+  <div class="bar">
+    <div class="bar-segment ref-purple" style="width: 10%">Scheduler 10%</div>
+    <div class="bar-segment ref-blue" style="width: 15%">MultiOrgAlertmanager 15%</div>
+    <div class="bar-segment ref-red" style="width: 30%">Dispatcher 30%</div>
+    <div class="bar-segment ref-teal" style="width: 10%">Inhibitor 10%</div>
+    <div class="bar-segment ref-amber" style="width: 10%">Silencer 10%</div>
+    <div class="bar-segment ref-green" style="width: 25%">NotificationLog 25%</div>
+  </div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch ref-purple"></span>Scheduler: rule evaluation</span>
+    <span class="legend-item"><span class="legend-swatch ref-blue"></span>MultiOrgAlertmanager: per-org routing overhead</span>
+    <span class="legend-item"><span class="legend-swatch ref-red"></span>Dispatcher: route tree matching</span>
+    <span class="legend-item"><span class="legend-swatch ref-teal"></span>Inhibitor: suppression checks</span>
+    <span class="legend-item"><span class="legend-swatch ref-amber"></span>Silencer: silence matching</span>
+    <span class="legend-item"><span class="legend-swatch ref-green"></span>NotificationLog: dedupe lookups</span>
+  </div>
+
+  <p>The same profile is shown below as a latency waterfall for one representative evaluation tick (roughly 2 seconds from start to finish):</p>
+
+  <div class="timeline">
+    <div class="timeline-row">
+      <span class="timeline-label">Scheduler</span>
+      <div class="timeline-track"><div class="timeline-bar" style="left: 0%; width: 12%"></div></div>
+    </div>
+    <div class="timeline-row">
+      <span class="timeline-label">MultiOrgAlertmanager</span>
+      <div class="timeline-track"><div class="timeline-bar" style="left: 10%; width: 15%"></div></div>
+    </div>
+    <div class="timeline-row">
+      <span class="timeline-label">Dispatcher</span>
+      <div class="timeline-track"><div class="timeline-bar" style="left: 24%; width: 38%"></div></div>
+    </div>
+    <div class="timeline-row">
+      <span class="timeline-label">Inhibitor</span>
+      <div class="timeline-track"><div class="timeline-bar" style="left: 30%; width: 10%"></div></div>
+    </div>
+    <div class="timeline-row">
+      <span class="timeline-label">Silencer</span>
+      <div class="timeline-track"><div class="timeline-bar" style="left: 41%; width: 10%"></div></div>
+    </div>
+    <div class="timeline-row">
+      <span class="timeline-label">NotificationLog</span>
+      <div class="timeline-track"><div class="timeline-bar" style="left: 60%; width: 30%"></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="before-after">
+  <h2>Single-tenant versus multi-org: a comparison</h2>
+  <p>The multi-org rework replaced one process-wide Alertmanager with one instance per organization. The comparison below states what changed at the component level:</p>
+
+  <div class="compare">
+    <div class="compare-col">
+      <h3 class="compare-col-title">Before: a single shared Alertmanager</h3>
+      <p>One <code class="ref-red">Dispatcher</code>, one <code class="ref-amber">Silencer</code>, and one <code class="ref-green">NotificationLog</code> served every organization on the instance. All three read a single, unpartitioned route tree keyed by an <code>org_id</code> label matcher attached to every rule.</p>
+      <p>If the label matchers overlapped, a misconfigured route for one organization's rules could silently discard another organization's alerts. In addition, a single slow receiver anywhere stalled dispatch for all tenants.</p>
+    </div>
+    <div class="compare-col">
+      <h3 class="compare-col-title">After: the <code class="ref-blue">MultiOrgAlertmanager</code></h3>
+      <p>Each organization receives its own <code class="ref-red">Dispatcher</code>, <code class="ref-teal">Inhibitor</code>, <code class="ref-amber">Silencer</code>, and <code class="ref-green">NotificationLog</code>, backed by an isolated on-disk store. Route trees are configured per organization through the UI. By construction, a route tree can no longer match another tenant's labels.</p>
+      <p>A slow or failing receiver in one organization's configuration no longer has a code path back into another organization's <code class="ref-red">Dispatcher</code> goroutine.</p>
+    </div>
+  </div>
+</section>
+
+<section id="trace">
+  <h2>Sample notification trace</h2>
+  <p>The table below traces a single evaluation tick for a payments-team rule, from start to finish:</p>
+
+  <table class="table-trace">
+    <thead>
+      <tr><th>Time</th><th>Component</th><th>Event</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>14:32:01.102</td><td>Scheduler</td><td>evaluate</td><td>rule=high-error-rate org=142 state=Alerting</td></tr>
+      <tr><td>14:32:01.108</td><td>MultiOrgAlertmanager</td><td>route</td><td>org=142 alerts=1</td></tr>
+      <tr><td>14:32:01.111</td><td>Dispatcher</td><td>match</td><td>receiver=payments-slack continue=true</td></tr>
+      <tr><td>14:32:01.114</td><td>Inhibitor</td><td>check</td><td>suppressed=false</td></tr>
+      <tr><td>14:32:01.117</td><td>Silencer</td><td>check</td><td>suppressed=false</td></tr>
+      <tr><td>14:32:01.121</td><td>NotificationLog</td><td>lookup</td><td>fingerprint=9f21ac dedup=false</td></tr>
+      <tr><td>14:32:01.240</td><td>Integrations</td><td>slack.Notify</td><td>status=200 latency=119ms</td></tr>
+      <tr><td>14:32:01.244</td><td>NotificationLog</td><td>write</td><td>fingerprint=9f21ac sent=true</td></tr>
+    </tbody>
+  </table>
+
+  <blockquote>
+    <p>This works, but <code>SendWebhook</code> had no timeout of its own. A hung receiver would stall <code>Notify</code>. Because the dispatcher notifies groups synchronously per receiver, a single hung receiver can back up the entire batch. A per-integration timeout should be threaded through <code>NotifierConfig</code> before this change is released.</p>
+    <span class="cite">review comment on the webhook timeout change, ngalert notifier rework</span>
+  </blockquote>
+</section>
+
+<footer class="doc-footer">
+  <p>Sources</p>
+  <ul class="source-list">
+    <li><code>pkg/services/ngalert/schedule/schedule.go</code>: evaluation loop</li>
+    <li><code>pkg/services/ngalert/notifier/multiorg_alertmanager.go</code>: per-org lifecycle</li>
+    <li><code>pkg/services/ngalert/notifier/alertmanager.go</code>: dispatch, inhibit, silence wiring</li>
+    <li><code>pkg/services/ngalert/notifier/channels/webhook.go</code>: webhook integration and timeout fix</li>
+  </ul>
+</footer>
+
+</div>
+</body>
+</html>

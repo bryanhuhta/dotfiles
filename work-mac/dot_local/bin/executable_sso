@@ -1,0 +1,62 @@
+#!/bin/bash
+## Authenticate via Tailscale and cloud (AWS/GCP) SSO for a given
+## environment, using deployment_tools' setup-context.
+##
+## setup-context checks existing credentials itself before prompting for
+## login. Use -f to force AWS SSO re-authentication. Requires
+## DEPLOY_TOOLS_DIR to be set.
+##
+## Usage: sso [-h] [-f|--force] [dev|ops|prod]
+##   -h, --help     Print this help message
+##   -f, --force    Force AWS SSO re-authentication
+##   dev            Authenticate to the dev environment (default)
+##   ops            Authenticate to the ops environment
+##   prod           Authenticate to the prod environment
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+env="dev"
+force=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -f|--force)
+      force=true
+      shift
+      ;;
+    dev|ops|prod)
+      env="$1"
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: sso [-f|--force] [dev|ops|prod]"
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "${DEPLOY_TOOLS_DIR:-}" ]]; then
+  echo "Error: DEPLOY_TOOLS_DIR is not set."
+  exit 1
+fi
+
+cd "${DEPLOY_TOOLS_DIR}" || {
+  echo "Error: Cannot cd into ${DEPLOY_TOOLS_DIR}"
+  exit 1
+}
+
+# --kubeconfig is specified explicitly because setup-context can't handle
+# multiple paths in $KUBECONFIG.
+args=(--kubeconfig="/Users/work/.kube/config" --cloud-sso "--${env}")
+
+if $force; then
+  args+=(--aws-reset-sso)
+fi
+
+./setup-context "${args[@]}"

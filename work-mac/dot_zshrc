@@ -1,0 +1,44 @@
+# Interactive-shell setup: prompt, plugins, aliases, keybindings.
+# Env vars and PATH live in .zshenv and .zprofile.
+
+# Path to your oh-my-zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
+
+ZSH_THEME="custom-eastwood"
+DISABLE_UPDATE_PROMPT="true"
+plugins=(git virtualenv)
+
+[ -f "$ZSH/oh-my-zsh.sh" ] && source "$ZSH/oh-my-zsh.sh"
+
+# Make ag output easier to read
+alias ag="ag --nogroup"
+
+# Make chezmoi faster to access
+alias z="chezmoi"
+
+# Make EDITOR faster to access
+alias e="$EDITOR"
+
+# git
+alias gfm="git fetch && git merge"
+alias gbomb="git restore --source HEAD --staged --worktree . && git clean -fd"
+
+# Deployment tools
+alias ignore="${DEPLOY_TOOLS_DIR}/scripts/flux/ignore.sh" --actor "Bryan Huhta"
+alias vaultd="VAULT_INSTANCE=dev GRAFANA_TEAM=pyroscope ${DEPLOY_TOOLS_DIR}/scripts/vault/vault-token"
+alias vaultp="VAULT_INSTANCE=prod GRAFANA_TEAM=pyroscope ${DEPLOY_TOOLS_DIR}/scripts/vault/vault-token"
+
+# GCOM
+alias gcomd="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-dev"
+alias gcomo="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-ops"
+alias gcomp="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom"
+alias gcomd-reconcile="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-dev-reconcile"
+alias gcomo-reconcile="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-ops-reconcile"
+alias gcom-reconcile="${DEPLOY_TOOLS_DIR}/scripts/gcom/gcom-reconcile"
+
+# kubectx
+alias ktx="kubectx -c"
+alias ktxlist="kubectx -c | xargs printf 'current: %s\n\n' && kubectx | grep -vE '^pop-'"
+
+# k6 dev config
+alias k6dev="K6_CLOUD_HOST=https://ingest.staging.k6.io k6"

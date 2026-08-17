@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fix duplicate job execution in LeaseManager: code review summary</title>
+<link rel="stylesheet" href="../explain.css">
+</head>
+<body>
+<div class="doc">
+
+  <header class="doc-header">
+    <p class="kicker">Code Review Summary</p>
+    <h1>Fix duplicate job execution in LeaseManager</h1>
+    <p class="dek">A check-then-act race between the lease renewal path and the expiration sweep allowed two workers to hold the same job lease under load. A single webhook delivery job could then execute twice, sending two POST requests instead of one.</p>
+    <p class="byline">Generated from diff <code>main</code> compared to <code>fix/lease-race-3312</code><span class="sep">&middot;</span>Reviewed by Marcus Webb<span class="sep">&middot;</span>2026-08-13</p>
+  </header>
+
+  <div class="stat-group">
+    <span class="stat-pill stat-pill-add">+86 lines</span>
+    <span class="stat-pill stat-pill-remove">&minus;34 lines</span>
+    <span class="stat-pill">4 files changed</span>
+    <span class="stat-pill">2 tests added</span>
+  </div>
+
+  <nav class="toc">
+    <p class="toc-title">Contents</p>
+    <ol>
+      <li><a href="#summary">Summary</a></li>
+      <li><a href="#root-cause">Root cause</a>
+        <ul>
+          <li><a href="#reproduction">Reproduction trace</a></li>
+        </ul>
+      </li>
+      <li><a href="#before-after">Before / after</a></li>
+      <li><a href="#the-fix">The fix</a></li>
+      <li><a href="#changed-files">Changed files</a></li>
+      <li><a href="#risk-and-nits">Risk and nitpicks</a></li>
+      <li><a href="#review-thread">Review thread</a></li>
+    </ol>
+  </nav>
+
+  <section id="summary">
+    <h2>Summary</h2>
+    <p>Between 2026-08-06 and 2026-08-09, the notifications team observed an increase in duplicate webhook deliveries. The same event id was posted to a customer endpoint twice, with a gap of roughly 40 to 90 milliseconds between deliveries. The duplicates occurred almost exclusively under high dequeue rates. Investigation traced the defect to <code class="ref-blue">LeaseManager</code>, the component <code class="ref-teal">WorkerPool</code> uses to ensure that only one worker owns a given job at a time. This PR closes the race condition that allowed two workers to hold the same lease simultaneously. It also adds a regression test that reproduces the interleaving deterministically.</p>
+  </section>
+
+  <section id="root-cause">
+    <h2>Root cause</h2>
+    <p>The lease lifecycle proceeds as follows. A worker dequeues a job and acquires a lease from <code class="ref-blue">LeaseManager</code>. The worker then spawns a background goroutine that periodically renews the lease while the job runs, and releases the lease when the job finishes. A separate background loop, <code class="ref-amber">sweepExpiredLeases</code>, walks the lease table and evicts any lease past its TTL. This eviction handles the case where a worker crashed without releasing its lease.</p>
+
+    <div class="flow">
+      <span class="flow-step">JobQueue.Dequeue</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-step ref-blue">LeaseManager.Acquire</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-step ref-teal">WorkerPool.runJob</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-step ref-amber">sweepExpiredLeases</span>
+    </div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch ref-blue"></span>LeaseManager: owns the lease table</span>
+      <span class="legend-item"><span class="legend-swatch ref-teal"></span>WorkerPool: runs jobs and spawns renewal goroutines</span>
+      <span class="legend-item"><span class="legend-swatch ref-amber"></span>lease sweeper: background eviction loop</span>
+    </div>
+
+    <p><code class="ref-blue">LeaseManager.Renew</code> read <code>lease.AcquiredAt</code> and compared it against the TTL <em>without holding the map's mutex</em>. It then wrote back an updated timestamp. If <code class="ref-amber">sweepExpiredLeases</code> ran its own TTL check and deleted that same lease during the gap between the read and the write, the renewal wrote a timestamp back to an entry that had already been removed. At the same time, a second worker's <code class="ref-blue">Acquire</code> call found no entry for that job id and created a new lease for the same job. Two workers ended up holding two separate leases for the same job.</p>
+
+    <h3 id="reproduction">Reproduction trace</h3>
+    <p>This trace is captured from <code>TestRenewSweepRace</code>, a new test in <code>lease_manager_test.go</code>. The test pins goroutine scheduling with <code>runtime.Gosched()</code> to force the interleaving on every run:</p>
+    <table class="table-trace">
+      <thead>
+        <tr>
+          <th>&Delta;t (ms)</th>
+          <th>goroutine</th>
+          <th>event</th>
+          <th>result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>0</td><td>worker-7</td><td>Acquire(job=wh_9f21) &rarr; lease L-4471</td><td>ok</td></tr>
+        <tr><td>812</td><td>worker-7</td><td>KeepAlive tick, Renew(L-4471) begins</td><td>reads AcquiredAt</td></tr>
+        <tr><td>815</td><td>sweeper</td><td>sweepExpiredLeases: TTL exceeded, delete(L-4471)</td><td>evicted</td></tr>
+        <tr><td>816</td><td>worker-7</td><td>Renew(L-4471) completes, writes AcquiredAt</td><td>stale write to a removed entry</td></tr>
+        <tr><td>817</td><td>worker-3</td><td>Acquire(job=wh_9f21) &rarr; lease L-4488</td><td>duplicate lease acquired</td></tr>
+        <tr><td>820</td><td>worker-3</td><td>job.Execute() &rarr; webhook POST sent</td><td>duplicate delivery</td></tr>
+        <tr><td>824</td><td>worker-7</td><td>job.Execute() &rarr; webhook POST sent</td><td>duplicate delivery</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="before-after">
+    <h2>Before / after</h2>
+    <div class="compare">
+      <div class="compare-col">
+        <p class="compare-col-title">Before: unsynchronized renew</p>
+        <p><code class="ref-blue">LeaseManager.Renew</code> checked <code>AcquiredAt</code> and updated it outside any lock. <code class="ref-amber">sweepExpiredLeases</code> could delete the same entry during that check. A deleted lease id was indistinguishable from a lease id that had never been issued. As a result, a second <code class="ref-teal">WorkerPool</code> acquire for the same job succeeded silently.</p>
+      </div>
+      <div class="compare-col">
+        <p class="compare-col-title">After: lock-guarded renew, soft eviction</p>
+        <p><code class="ref-blue">LeaseManager.Renew</code> now holds <code>m.mu</code> for its entire read-modify-write operation. <code class="ref-amber">sweepExpiredLeases</code> marks a lease <code>evicted</code> instead of deleting it while a renew is in flight. The sweeper also skips any lease that is currently mid-renewal.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="the-fix">
+    <h2>The fix</h2>
+    <p>The fix requires two changes to <code>internal/scheduler/lease_manager.go</code> and one change to the worker pool. The worker pool change ensures that a released lease does not keep renewing after the job is done.</p>
+
+    <div class="code-block-title">internal/scheduler/lease_manager.go</div>
+    <div class="diff-split">
+      <div class="diff-pane diff-pane-head">
+        <p class="diff-pane-label">HEAD</p>
+        <pre class="code-block"><code><span class="line">func (m *LeaseManager) Renew(leaseID string) error {</span>
+<span class="line line-remove">    lease, ok := m.leases[leaseID]</span>
+<span class="line line-remove">    if !ok {</span>
+<span class="line line-remove">        return ErrLeaseNotFound</span>
+<span class="line line-remove">    }</span>
+<span class="line line-remove">    if time.Since(lease.AcquiredAt) &gt; m.ttl {</span>
+<span class="line line-remove">        return ErrLeaseExpired</span>
+<span class="line line-remove">    }</span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line">    lease.AcquiredAt = time.Now()</span>
+<span class="line">    return nil</span>
+<span class="line">}</span></code></pre>
+      </div>
+      <div class="diff-pane diff-pane-new">
+        <p class="diff-pane-label">NEW</p>
+        <pre class="code-block"><code><span class="line">func (m *LeaseManager) Renew(leaseID string) error {</span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-add">    m.mu.Lock()</span>
+<span class="line line-add">    defer m.mu.Unlock()</span>
+<span class="line line-add"></span>
+<span class="line line-add">    lease, ok := m.leases[leaseID]</span>
+<span class="line line-add">    if !ok {</span>
+<span class="line line-add">        return ErrLeaseNotFound</span>
+<span class="line line-add">    }</span>
+<span class="line line-add">    if lease.evicted {</span>
+<span class="line line-add">        return ErrLeaseExpired</span>
+<span class="line line-add">    }</span>
+<span class="line">    lease.AcquiredAt = time.Now()</span>
+<span class="line">    return nil</span>
+<span class="line">}</span></code></pre>
+      </div>
+    </div>
+
+    <p>The sweeper is also changed so that it does not remove a lease that a renewal is actively updating:</p>
+
+    <div class="code-block-title">internal/scheduler/lease_manager.go</div>
+    <div class="diff-split">
+      <div class="diff-pane diff-pane-head">
+        <p class="diff-pane-label">HEAD</p>
+        <pre class="code-block"><code><span class="line">func (m *LeaseManager) sweepExpiredLeases() {</span>
+<span class="line">    m.mu.Lock()</span>
+<span class="line">    defer m.mu.Unlock()</span>
+<span class="line"></span>
+<span class="line">    for id, lease := range m.leases {</span>
+<span class="line line-remove">        if time.Since(lease.AcquiredAt) &gt; m.ttl {</span>
+<span class="line line-remove">            delete(m.leases, id)</span>
+<span class="line line-remove">        }</span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre>
+      </div>
+      <div class="diff-pane diff-pane-new">
+        <p class="diff-pane-label">NEW</p>
+        <pre class="code-block"><code><span class="line">func (m *LeaseManager) sweepExpiredLeases() {</span>
+<span class="line">    m.mu.Lock()</span>
+<span class="line">    defer m.mu.Unlock()</span>
+<span class="line"></span>
+<span class="line">    for id, lease := range m.leases {</span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-add">        if time.Since(lease.AcquiredAt) &gt; m.ttl &amp;&amp; !lease.renewing {</span>
+<span class="line line-add">            lease.evicted = true</span>
+<span class="line line-add">            delete(m.leases, id)</span>
+<span class="line line-add">        }</span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre>
+      </div>
+    </div>
+
+    <p>The call site that spawns the renewal goroutine was the other part of the fix. It had no way to stop renewing once <code>Release</code> was called. This gap let a renewal race a sweep long after the job itself had finished:</p>
+
+    <div class="code-block-title">internal/scheduler/worker_pool.go</div>
+    <pre class="code-block"><code><span class="line">func (p *WorkerPool) runJob(job Job) {</span>
+<span class="line">    lease, err := p.leases.Acquire(job.ID, p.leaseTTL)</span>
+<span class="line">    if err != nil {</span>
+<span class="line">        return</span>
+<span class="line">    }</span>
+<span class="line line-focus">    go p.leases.KeepAlive(lease.ID, p.renewInterval)</span>
+<span class="line">    defer p.leases.Release(lease.ID)</span>
+<span class="line">    job.Execute()</span>
+<span class="line">}</span></code></pre>
+
+    <p>The highlighted line requires the most attention in review. <code>KeepAlive</code> now takes a <code>context.Context</code> tied to the job's lifetime. It exits as soon as <code>Release</code> is called, instead of relying on the lease to expire on its own.</p>
+  </section>
+
+  <section id="changed-files">
+    <h2>Changed files</h2>
+
+    <ul class="tree">
+      <li><span class="tree-node">internal/scheduler/</span>
+        <ul>
+          <li><span class="tree-node ref-blue">lease_manager.go</span></li>
+          <li><span class="tree-node ref-teal">worker_pool.go</span></li>
+          <li><span class="tree-node">lease_manager_test.go</span></li>
+        </ul>
+      </li>
+      <li><span class="tree-node">CHANGELOG.md</span></li>
+    </ul>
+
+    <p>Share of the diff by file:</p>
+    <div class="bar">
+      <div class="bar-segment ref-blue" style="width: 58%">lease_manager.go</div>
+      <div class="bar-segment ref-teal" style="width: 18%">worker_pool.go</div>
+      <div class="bar-segment" style="width: 20%">tests</div>
+      <div class="bar-segment" style="width: 4%">changelog</div>
+    </div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch ref-blue"></span>lease_manager.go</span>
+      <span class="legend-item"><span class="legend-swatch ref-teal"></span>worker_pool.go</span>
+      <span class="legend-item"><span class="legend-swatch"></span>tests &amp; docs (unmarked)</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>File</th><th>+</th><th>&minus;</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>internal/scheduler/lease_manager.go</td><td>+38</td><td>&minus;22</td><td>Mutex-guarded renew; soft eviction flag replaces hard delete</td></tr>
+        <tr><td>internal/scheduler/worker_pool.go</td><td>+9</td><td>&minus;4</td><td>KeepAlive now stops on Release via context cancellation</td></tr>
+        <tr><td>internal/scheduler/lease_manager_test.go</td><td>+37</td><td>&minus;6</td><td>Adds TestRenewSweepRace, a deterministic reproduction of the race</td></tr>
+        <tr><td>CHANGELOG.md</td><td>+2</td><td>&minus;2</td><td>Notes the fix under Unreleased</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="risk-and-nits">
+    <h2>Risk and nitpicks</h2>
+
+    <div class="admonition warning">
+      <p>This fix closes the specific interleaving reproduced above. <code class="ref-blue">LeaseManager</code> still trusts a bare <code>leaseID</code> string with no fencing token. If lease hand-off between workers is added later, for example work stealing during rebalance, the same class of check-then-act error can recur in a different form. This risk warrants a follow-up ticket before that work begins. It is not a blocker for this PR.</p>
+    </div>
+
+    <div class="admonition note">
+      <p>The renewal interval is computed as <code>p.leaseTTL / 2</code> in both <code>worker_pool.go</code> and the new test file. Two copies of this calculation now exist. Promoting it to an exported constant on <code class="ref-blue">LeaseManager</code> would prevent the two values from drifting apart.</p>
+    </div>
+
+    <div class="admonition tip">
+      <p>After this change lands, lease-acquire duplicates should be graphed as a metric. The metric would count <code>Acquire</code> calls for a job id already tracked as delivered. A regression of this kind would then appear on a dashboard before customers notice duplicate webhooks.</p>
+    </div>
+  </section>
+
+  <section id="review-thread">
+    <h2>Review thread</h2>
+    <blockquote>
+      <p>This is a check-then-act race that is invisible in a diff but obvious once the interleaving is written out. The eviction flag is the correct approach, and it is safer than making delete-during-renew atomic. Approval is granted once the fencing-token follow-up has a ticket number.</p>
+      <footer class="cite">Marcus Webb, reviewing PR #3312</footer>
+    </blockquote>
+  </section>
+
+  <footer class="doc-footer">
+    <p>Sources</p>
+    <ul class="source-list">
+      <li>PR #3312: <code>fix/lease-race-3312</code> &rarr; <code>main</code></li>
+      <li>Incident INC-4821: duplicate webhook deliveries, 2026-08-09</li>
+      <li>Runbook: Scheduler on-call, &ldquo;Lease manager&rdquo; section</li>
+    </ul>
+  </footer>
+
+</div>
+</body>
+</html>

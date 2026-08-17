@@ -1,0 +1,25 @@
+#!/bin/bash
+## Convert a .webp image to .gif using ImageMagick (via the `utility`
+## Docker container).
+##
+## Output is written to the current directory with a .gif extension.
+## The input path must be inside the current directory.
+##
+## Usage: gifify [-h] <file.webp>
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+if [[ -z "${1:-}" ]]; then
+  echo "Usage: gifify <file.webp>"
+  exit 1
+fi
+
+file="$1"
+name=$(basename "$file" ".webp")
+utility magick -format gif "$file" "${name}.gif"

@@ -1,0 +1,23 @@
+#!/bin/bash
+## Install packages declared for the active profile.
+##
+## brew-based profiles read from ~/.Brewfile via `brew bundle`. dnf-based
+## profiles read from ~/.dnf-packages via `dnf install`.
+##
+## chezmoi re-runs this script whenever its rendered content changes. The
+## package file's sha is embedded as a comment so edits to it also trigger
+## a re-run.
+##
+## Applying converges only: missing packages are installed, but packages
+## that are already installed are left at their current version. Upgrade
+## intentionally with `brew bundle upgrade --global` / `brew upgrade`, or
+## `dnf upgrade`.
+##
+## Profiles not listed below get no package installation at all — add an
+## explicit branch here rather than falling back to a default.
+
+set -euo pipefail
+
+export HOMEBREW_NO_AUTO_UPDATE=1
+# Brewfile sha: {{ include "dot_Brewfile" | sha256sum }}
+/opt/homebrew/bin/brew bundle install --global --no-upgrade
