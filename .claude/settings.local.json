@@ -15,7 +15,6 @@
       "Bash(chezmoi execute-template *)",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:docs.bazzite.gg)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(git *)",
       "Bash(go version *)",

@@ -43,9 +43,6 @@
 {{- if or (eq .profile "personal") (eq .profile "work") }}
 	program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
 {{- end }}
-{{- if or (eq .profile "personal-fedora") (eq .profile "personal-bazzite") }}
-	program = "/opt/1Password/op-ssh-sign"
-{{- end }}
 	allowedSignersFile = ~/.ssh/allowed_signers
 {{- end }}
 

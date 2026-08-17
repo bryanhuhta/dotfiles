@@ -6,9 +6,6 @@ Host *
 {{- if or (eq .profile "personal") (eq .profile "work") }}
   IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
 {{- end }}
-{{- if or (eq .profile "personal-fedora") (eq .profile "personal-bazzite") }}
-  IdentityAgent "~/.1password/agent.sock"
-{{- end }}
 
 {{- if eq .profile "personal" }}
 

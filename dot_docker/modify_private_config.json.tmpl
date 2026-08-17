@@ -8,9 +8,6 @@ managed='{
 {{- if or (eq .profile "personal") (eq .profile "work") }}
 managed=$(jq '. + {"credsStore": "osxkeychain"}' <<<"$managed")
 {{- end }}
-{{- if or (eq .profile "personal-fedora") (eq .profile "personal-bazzite") }}
-managed=$(jq '. + {"credsStore": "secretservice"}' <<<"$managed")
-{{- end }}
 
 current=$(cat)
 [[ -z "$current" ]] && current='{}'

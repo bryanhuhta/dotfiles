@@ -115,7 +115,7 @@ Use separate `if` blocks rather than `if/else` so each profile's section is inde
 
 ```
 {{- if not .profile }}
-{{ fail "profile is not set in chezmoi.toml — set `profile` to personal, work, personal-bazzite, or personal-fedora before running apply" }}
+{{ fail "profile is not set in chezmoi.toml — set `profile` to personal or work before running apply" }}
 {{- end }}
 ```
 
@@ -124,19 +124,20 @@ Because `.chezmoiignore` is read on every chezmoi command, this guard means no o
 **Never use a bare `else` (or catch-all `else if`) to fall back to a "default" case.** Write one explicit `if` per profile that should get a given piece of config. A profile that matches none of them should render nothing for that block — not silently inherit some other profile's behavior. Implicit defaults are exactly how machine-specific values (a macOS-only path, a brew-only command) leak onto profiles that were never meant to have them:
 
 ```
-# Bad — new profiles silently inherit the mac path with no warning:
-{{- if or (eq .profile "personal") (eq .profile "work") }}
-  IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+# Bad — a bare else hands every profile that isn't "personal" the work value,
+# including any profile added later that was never considered here:
+{{- if eq .profile "personal" }}
+  setting = personal-value
 {{- else }}
-  IdentityAgent "~/.1password/agent.sock"
+  setting = work-value
 {{- end }}
 
-# Good — every profile that gets this line is named explicitly; anything else gets none:
-{{- if or (eq .profile "personal") (eq .profile "work") }}
-  IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+# Good — every profile that gets a value is named explicitly; anything else gets none:
+{{- if eq .profile "personal" }}
+  setting = personal-value
 {{- end }}
-{{- if or (eq .profile "personal-fedora") (eq .profile "personal-bazzite") }}
-  IdentityAgent "~/.1password/agent.sock"
+{{- if eq .profile "work" }}
+  setting = work-value
 {{- end }}
 ```
 
@@ -146,28 +147,22 @@ This applies to `.chezmoiignore` blocks and shell script branches (e.g. `run_onc
 
 ```
 # Bad — renders (and "runs", for a script) as an empty no-op on every other profile:
-{{ if eq .profile "personal-bazzite" -}}
+{{ if eq .profile "work" -}}
 #!/bin/bash
-brew install zsh
+some-work-only-setup-command
 ...
 {{- end }}
 
 # Good — the file only needs to exist for one profile, so gate its existence in .chezmoiignore,
 # and drop the .tmpl suffix from the file entirely if nothing inside it needs to be templated:
 #!/bin/bash
-brew install zsh
+some-work-only-setup-command
 ...
 ```
 ```
 # .chezmoiignore
 {{- if eq .profile "personal" }}
-install-zsh.sh
-{{- end }}
-{{- if eq .profile "work" }}
-install-zsh.sh
-{{- end }}
-{{- if eq .profile "personal-fedora" }}
-install-zsh.sh
+install-work-tool.sh
 {{- end }}
 ```
 

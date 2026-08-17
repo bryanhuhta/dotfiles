@@ -37,20 +37,6 @@ brew "jdtls"       # Java language server
 brew "zls"         # Zig language server
 {{ end }}
 
-{{ if eq .profile "personal-bazzite" }}
-# Development tools
-cask "claude-code" # Claude Code
-brew "gh"          # GitHub cli
-brew "git"         # Version control system
-brew "git-lfs"     # Large file storage (gitconfig declares required lfs filters)
-brew "go"          # go programming language
-brew "zig"         # Zig programming language
-
-# Neovim dependencies
-brew "gopls"       # Go language server
-brew "zls"         # Zig language server
-{{ end }}
-
 {{ if eq .profile "work" -}}
 # Work tools
 

@@ -1,17 +1,15 @@
 #!/bin/bash
 ## Install packages declared for the active profile.
 ##
-## brew-based profiles read from ~/.Brewfile via `brew bundle`. dnf-based
-## profiles read from ~/.dnf-packages via `dnf install`.
+## The personal and work profiles read from ~/.Brewfile via `brew bundle`.
 ##
 ## chezmoi re-runs this script whenever its rendered content changes. The
-## package file's sha is embedded as a comment so edits to it also trigger
+## Brewfile's sha is embedded as a comment so edits to it also trigger
 ## a re-run.
 ##
 ## Applying converges only: missing packages are installed, but packages
 ## that are already installed are left at their current version. Upgrade
-## intentionally with `brew bundle upgrade --global` / `brew upgrade`, or
-## `dnf upgrade`.
+## intentionally with `brew bundle upgrade --global` / `brew upgrade`.
 ##
 ## Profiles not listed below get no package installation at all — add an
 ## explicit branch here rather than falling back to a default.
@@ -22,29 +20,4 @@ set -euo pipefail
 export HOMEBREW_NO_AUTO_UPDATE=1
 # Brewfile sha: {{ include "dot_Brewfile.tmpl" | sha256sum }}
 /opt/homebrew/bin/brew bundle install --global --no-upgrade
-{{- else if eq .profile "personal-bazzite" -}}
-export HOMEBREW_NO_AUTO_UPDATE=1
-# Brewfile sha: {{ include "dot_Brewfile.tmpl" | sha256sum }}
-/home/linuxbrew/.linuxbrew/bin/brew bundle install --global --no-upgrade
-{{- else if eq .profile "personal-fedora" -}}
-# dnf-packages sha: {{ include "dot_dnf-packages.tmpl" | sha256sum }}
-
-# Enable any COPRs a package needs (declared as "# copr:owner/repo" lines in
-# .dnf-packages) before installing — dnf can't find a COPR-only package in a
-# repo that isn't enabled yet. Idempotent: re-enabling an already-enabled
-# COPR is a no-op.
-coprs=$(grep -oP '^# copr:\K\S+' "$HOME/.dnf-packages" || true)
-for copr in $coprs; do
-  sudo dnf copr enable -y "$copr"
-done
-
-# Strip trailing "# comment" text (not just whole-line comments) before
-# word-splitting into args — a bare grep -v '^#' would leave inline comments
-# in place and pass their words to dnf as if they were package names.
-packages=$(sed 's/#.*//' "$HOME/.dnf-packages" | xargs || true)
-if [[ -n "$packages" ]]; then
-  sudo dnf install -y $packages
-else
-  echo "install-packages: ~/.dnf-packages has no packages listed yet" >&2
-fi
 {{- end }}

@@ -21,7 +21,7 @@ machine-specific values:
 
 | Key               | Required | Default      | Description                                                    |
 |-------------------|----------|--------------|----------------------------------------------------------------|
-| `profile`         | yes      | -            | dotfile profile: `personal`, `work`, or `personal-bazzite`; templates fail to render if unset |
+| `profile`         | yes      | -            | dotfile profile: `personal` or `work`; templates fail to render if unset |
 | `git.name`        | yes      | -            | git username                                                   |
 | `git.email`       | yes      | -            | git email                                                      |
 | `git.signingkey`  | no       | -            | SSH public key string for commit signing; enables signing when set |
@@ -99,7 +99,3 @@ workspace's app settings.
    ```sh
    security add-generic-password -a "$USER" -s "gcx-sandbox" -U -w
    ```
-
-## Bazzite
-
-First-time setup only: after the initial `chezmoi apply` installs zsh, do **not** change the system login shell — on Bazzite this can break graphical login. Instead, point your terminal emulator at zsh (ghostty: `command = /home/linuxbrew/.linuxbrew/bin/zsh`; Ptyxis/Konsole: profile → "Use Custom Command").
