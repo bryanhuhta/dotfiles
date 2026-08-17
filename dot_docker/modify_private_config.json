@@ -5,9 +5,7 @@ managed='{
   "currentContext": "orbstack"
 }'
 
-{{- if or (eq .profile "personal") (eq .profile "work") }}
 managed=$(jq '. + {"credsStore": "osxkeychain"}' <<<"$managed")
-{{- end }}
 
 current=$(cat)
 [[ -z "$current" ]] && current='{}'

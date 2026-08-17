@@ -1,0 +1,82 @@
+# Homebrew packages for the work-mac profile, installed by
+# run_onchange_install-packages.sh.tmpl. The install script renders these
+# names directly into `brew` commands, so adding or removing an entry changes
+# the rendered script and makes chezmoi re-run it on the next apply. Comments
+# here do not render into the script, so editing a comment alone won't
+# trigger a re-run.
+
+[packages]
+
+taps = [
+  "agavra/tap", # git review TUI (tuicr, listed under brews)
+]
+
+brews = [
+  # Base tools
+  "chezmoi",             # Dotfile manager
+  "fzf",                 # Fuzzy finder (used by the nvim fzf plugin)
+  "jq",                  # Parse JSON from the command line
+  "neovim",              # Neovim, of course
+  "the_silver_searcher", # ag (better version of grep)
+  "tree",                # Display directories as trees
+  "tree-sitter-cli",     # Compiles nvim-treesitter grammars
+
+  # Operations tools
+  "awscli",              # AWS cli
+  "azure-cli",           # Azure cli
+  "helm",                # Kubernetes package manager
+  "go-jsonnet",          # Jsonnet language (Go implementation)
+  "kubectx",             # List and switch between Kubernetes contexts
+  "kubernetes-cli",      # kubectl
+  "tanka",               # Grafana's Jsonnet-based Kubernetes config tool
+
+  # Development tools
+  "buf",                 # Protobuf build tool
+  "gh",                  # GitHub cli
+  "go",                  # go programming language
+  "gradle",              # JVM build tool
+  "jenv",                # Java environment manager
+  "k6",                  # Load testing tool
+  "libpq",               # Postgres client tools (psql)
+  "mage",                # Go-based build tool
+  "openjdk@21",          # LTS JDK, registered with jenv for version switching
+  "protobuf",            # Protocol buffers (protoc)
+  "zig",                 # Zig programming language
+
+  # Productivity tools
+  "duckdb",              # In-process SQL OLAP database
+  "graphviz",            # Graph visualization (dot)
+  "tuxedo",              # todo.txt TUI
+
+  # Neovim dependencies
+  "gopls",               # Go language server
+  "jdtls",               # Java language server
+  "xcbeautify",          # Formatter for xcodebuild output
+  "xcode-build-server",  # Feeds Xcode build flags to sourcekit-lsp
+  "zls",                 # Zig language server
+
+  # From taps above
+  "agavra/tap/tuicr",    # git review TUI
+]
+
+casks = [
+  # Operations tools
+  "aptakube",            # Kubernetes management GUI
+  "gcloud-cli",          # Google Cloud cli
+
+  # Development tools
+  "codex",               # Codex
+  "claude-code",         # Claude Code
+  "dotnet-sdk",          # .NET SDK
+  "ghostty",             # Terminal emulator
+  "orbstack",            # Docker engine and cli (docker, buildx, compose, credential helper)
+  "zed",                 # GUI code editor
+
+  # Productivity tools
+  "chatgpt",             # ChatGPT desktop app
+  "firefox",             # Firefox web browser
+  "1password-cli",       # 1Password cli
+  "markedit",            # Markdown reader
+  "rectangle",           # Window manager
+  "slack",               # Communication tool
+]

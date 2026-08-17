@@ -1,5 +1,12 @@
-{{- if not .profile }}
-{{ fail "profile is not set in chezmoi.toml — set `profile` to personal or work before running apply" }}
+{{- /*
+This branch is the "work-mac" profile. Every managed file here assumes the
+platform is a work MacBook — there are no per-profile conditionals anymore.
+Assert the profile is exactly "work-mac" (not merely set) so applying these
+dotfiles on a machine configured for a different profile fails loudly rather
+than silently writing work-mac config to the wrong machine.
+*/ -}}
+{{- if ne (.profile | default "") "work-mac" }}
+{{-   fail (printf "this is the work-mac branch, but chezmoi.toml sets profile to %q — set `profile = \"work-mac\"` before running apply" (.profile | default "")) }}
 {{- end }}
 
 ### Files local to the chezmoi repository ###
@@ -28,27 +35,4 @@ zed_settings.json
 {{- if not (hasKey .git "signingkey") }}
 # No signing key configured on this machine
 .ssh/allowed_signers
-{{- end }}
-
-{{- if eq .profile "personal" }}
-# Not loaded on the personal profile
-.local/bin/p
-.local/bin/sso
-.local/bin/mermaid
-.local/bin/ts2date
-.local/bin/gifify
-.local/bin/slackify
-.local/bin/jpegify
-.local/bin/scan
-.local/bin/docker-clean
-{{- end }}
-
-{{- if eq .profile "work" }}
-# Not loaded on the work profile
-.local/bin/pico8
-
-# Wright Auto Server key is in the Private vault, personal profile only.
-# The template also guards the onepasswordRead call itself — see its
-# comment for why that guard can't be replaced by this ignore alone.
-.ssh/wrightauto.pub
 {{- end }}

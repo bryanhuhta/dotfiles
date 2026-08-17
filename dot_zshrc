@@ -19,7 +19,6 @@ alias z="chezmoi"
 # Make EDITOR faster to access
 alias e="$EDITOR"
 
-{{- if eq .profile "work" }}
 # git
 alias gfm="git fetch && git merge"
 alias gbomb="git restore --source HEAD --staged --worktree . && git clean -fd"
@@ -43,4 +42,3 @@ alias ktxlist="kubectx -c | xargs printf 'current: %s\n\n' && kubectx | grep -vE
 
 # k6 dev config
 alias k6dev="K6_CLOUD_HOST=https://ingest.staging.k6.io k6"
-{{- end }}

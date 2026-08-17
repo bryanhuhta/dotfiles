@@ -7,14 +7,10 @@
 # reference these variables resolve correctly even in non-login subshells.
 
 # Homebrew (sets PATH, MANPATH, INFOPATH, HOMEBREW_PREFIX, ...).
-{{- if or (eq .profile "personal") (eq .profile "work") }}
 eval "$(/opt/homebrew/bin/brew shellenv)"
-{{- end }}
 
 # Utility scripts
 export PATH="$HOME/.local/bin:$PATH"
-
-{{- if or (eq .profile "personal") (eq .profile "work") }}
 
 # Go
 export GOPATH="$HOME/go"
@@ -25,9 +21,6 @@ export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 # Rust / cargo
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-{{- end }}
-
-{{- if eq .profile "work" }}
 
 # node, nvm (installed as an archive via .chezmoiexternal.toml)
 export NVM_DIR="$HOME/.nvm"
@@ -59,7 +52,6 @@ export PATH="$PATH:${HOMEBREW_PREFIX}/share/google-cloud-sdk/bin"
 if command -v jenv &>/dev/null; then
   eval "$(jenv init -)"
 fi
-{{- end }}
 
 # OrbStack
 source ~/.orbstack/shell/init.zsh 2>/dev/null || :

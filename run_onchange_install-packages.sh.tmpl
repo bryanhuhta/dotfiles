@@ -1,23 +1,24 @@
 #!/bin/bash
-## Install packages declared for the active profile.
+## Install Homebrew packages declared in .chezmoidata/packages.toml.
 ##
-## The personal and work profiles read from ~/.Brewfile via `brew bundle`.
+## The package names are rendered directly into the brew commands below, so
+## chezmoi re-runs this script whenever the list changes (run_onchange keys
+## off the rendered content). Comments in packages.toml don't render here, so
+## editing a comment alone won't trigger a re-run.
 ##
-## chezmoi re-runs this script whenever its rendered content changes. The
-## Brewfile's sha is embedded as a comment so edits to it also trigger
-## a re-run.
-##
-## Applying converges only: missing packages are installed, but packages
-## that are already installed are left at their current version. Upgrade
-## intentionally with `brew bundle upgrade --global` / `brew upgrade`.
-##
-## Profiles not listed below get no package installation at all — add an
-## explicit branch here rather than falling back to a default.
+## Converges only: `brew install` skips already-installed packages and does
+## not upgrade them. Upgrade intentionally with `brew upgrade`.
 
 set -euo pipefail
 
-{{ if or (eq .profile "personal") (eq .profile "work") -}}
 export HOMEBREW_NO_AUTO_UPDATE=1
-# Brewfile sha: {{ include "dot_Brewfile.tmpl" | sha256sum }}
-/opt/homebrew/bin/brew bundle install --global --no-upgrade
-{{- end }}
+
+{{ range .packages.taps -}}
+brew tap {{ . | quote }}
+{{ end -}}
+
+brew install{{ range .packages.brews }} \
+  {{ . | quote }}{{ end }}
+
+brew install --cask{{ range .packages.casks }} \
+  {{ . | quote }}{{ end }}
