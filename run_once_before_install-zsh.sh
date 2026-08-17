@@ -1,5 +1,5 @@
-{{ if eq .profile "personal-bazzite" -}}
 #!/bin/bash
+## personal-bazzite only — see .chezmoiignore.
 set -euo pipefail
 
 # zsh (linuxbrew)
@@ -11,4 +11,3 @@ if [ -d "$HOME/.oh-my-zsh" ]; then
   exit 1
 fi
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-{{- end }}

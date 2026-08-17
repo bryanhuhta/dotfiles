@@ -28,6 +28,16 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 /home/linuxbrew/.linuxbrew/bin/brew bundle install --global --no-upgrade
 {{- else if eq .profile "personal-fedora" -}}
 # dnf-packages sha: {{ include "dot_dnf-packages.tmpl" | sha256sum }}
+
+# Enable any COPRs a package needs (declared as "# copr:owner/repo" lines in
+# .dnf-packages) before installing — dnf can't find a COPR-only package in a
+# repo that isn't enabled yet. Idempotent: re-enabling an already-enabled
+# COPR is a no-op.
+coprs=$(grep -oP '^# copr:\K\S+' "$HOME/.dnf-packages" || true)
+for copr in $coprs; do
+  sudo dnf copr enable -y "$copr"
+done
+
 # Strip trailing "# comment" text (not just whole-line comments) before
 # word-splitting into args — a bare grep -v '^#' would leave inline comments
 # in place and pass their words to dnf as if they were package names.

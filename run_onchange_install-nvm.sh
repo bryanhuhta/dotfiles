@@ -1,4 +1,3 @@
-{{ if eq .profile "work" -}}
 #!/bin/bash
 ## Install nvm via the official installer (Homebrew installation is
 ## unsupported upstream, so nvm is not in the Brewfile).
@@ -7,6 +6,8 @@
 ## re-running upgrades an existing clone in place. chezmoi re-runs this
 ## script whenever its rendered content changes, so bump the version below
 ## to upgrade nvm.
+##
+## work only — see .chezmoiignore.
 
 set -euo pipefail
 
@@ -17,4 +18,3 @@ mkdir -p "${NVM_DIR:-$HOME/.nvm}"
 # PROFILE=/dev/null stops the installer from appending source lines to
 # shell rc files; .zprofile already sources nvm.
 PROFILE=/dev/null bash -c "$(curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.6/install.sh)"
-{{- end }}

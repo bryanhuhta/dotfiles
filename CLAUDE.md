@@ -142,6 +142,37 @@ Because `.chezmoiignore` is read on every chezmoi command, this guard means no o
 
 This applies to `.chezmoiignore` blocks and shell script branches (e.g. `run_onchange_install-packages.sh.tmpl`'s package manager selection) just as much as inline template conditionals. When adding a new profile, its config gaps should show up as *missing* config (or a script that visibly no-ops), never as another profile's config applied by accident.
 
+**Never gate an entire file's existence by wrapping all of its content in one `{{ if }}`.** If a file is only relevant to one (or a few) profiles, use `.chezmoiignore` to exclude its target on every other profile instead. A whole-file `{{ if }}` still creates the file — empty, but present and marked as managed — everywhere the condition is false; `.chezmoiignore` is what actually keeps it off other profiles:
+
+```
+# Bad — renders (and "runs", for a script) as an empty no-op on every other profile:
+{{ if eq .profile "personal-bazzite" -}}
+#!/bin/bash
+brew install zsh
+...
+{{- end }}
+
+# Good — the file only needs to exist for one profile, so gate its existence in .chezmoiignore,
+# and drop the .tmpl suffix from the file entirely if nothing inside it needs to be templated:
+#!/bin/bash
+brew install zsh
+...
+```
+```
+# .chezmoiignore
+{{- if eq .profile "personal" }}
+install-zsh.sh
+{{- end }}
+{{- if eq .profile "work" }}
+install-zsh.sh
+{{- end }}
+{{- if eq .profile "personal-fedora" }}
+install-zsh.sh
+{{- end }}
+```
+
+**Exception: if the file's template body calls something side-effecting or environment-dependent** (`onepasswordRead`, `output`, `exec`, or similar — anything that shells out or depends on machine state), keep an in-template `{{ if }}` guard around that specific call. `.chezmoiignore` filters the target only *after* the whole template has already been rendered — it cannot stop the call itself from being evaluated on a profile where it would fail (e.g. an `op://` reference to a vault item that doesn't exist there, or `op` not being installed at all). Verified empirically: a `.chezmoiignore`-excluded template's `{{ fail }}` call still fired when rendered directly. `hasKey`/`eq`/plain data lookups have no such risk and should still move to `.chezmoiignore`, same as any other whole-file gate — only calls with actual side effects need the in-template guard. When you do keep one, also add the file to `.chezmoiignore` for the other profiles anyway, as a defense-in-depth backstop and to document the intent (see `private_dot_ssh/wrightauto.pub.tmpl` for a worked example, including the comment explaining why).
+
 **When to split vs combine:** Use a single file with `if` blocks when profile differences are small. Use separate files per profile when differences are large enough that a single file becomes hard to follow.
 
 Profiles are intentionally decoupled from hostnames or other machine identifiers. Never gate behavior on `.chezmoi.hostname` or similar — the profile variable exists precisely so config stays valid when hardware changes.

@@ -3,6 +3,10 @@
 # whose install script invokes dnf.
 #
 # One package per line. Comments and blank lines are ignored.
+#
+# A package that lives in a COPR needs that COPR enabled first, or dnf won't
+# find it. Declare it with a "# copr:owner/repo" line above the package —
+# the install script greps for these and enables each one before installing.
 
 {{ if eq .profile "personal-fedora" -}}
 # Personal tools
@@ -11,6 +15,9 @@
 git                  # Version control system
 neovim               # Neovim, of course
 zsh                  # Shell (needed before installing oh-my-zsh)
+
+# copr:scottames/ghostty
+ghostty              # Terminal emulator — not in official Fedora repos
 
 # Neovim dependencies
 fzf                  # Fuzzy finder (used by the nvim fzf-lua plugin)

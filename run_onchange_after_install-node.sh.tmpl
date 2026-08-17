@@ -1,4 +1,3 @@
-{{ if or (eq .profile "personal") (eq .profile "work") -}}
 #!/bin/bash
 ## Install node via nvm and enable corepack, which provides yarn.
 ##
@@ -9,6 +8,8 @@
 ## the sourced nvm.sh) triggers a re-run.
 ##
 ## Idempotent: an already-installed node version is left as is.
+##
+## personal and work only — see .chezmoiignore.
 
 set -euo pipefail
 
@@ -26,4 +27,3 @@ set -u
 # Corepack ships with node and shims yarn (and pnpm) into the active node
 # version's bin directory, respecting each project's packageManager field.
 corepack enable
-{{- end }}

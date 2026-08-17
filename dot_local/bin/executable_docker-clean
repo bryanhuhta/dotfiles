@@ -1,10 +1,11 @@
-{{- if eq .profile "work" -}}
 #!/bin/bash
 ## Aggressively clean up Docker: stopped containers, unused images,
 ## volumes, networks, and build cache.
 ##
 ## Shows what will be removed and prompts before deleting. Uses
 ## `docker system prune -a --volumes` under the hood.
+##
+## work only — see .chezmoiignore.
 ##
 ## Usage: docker-clean [-h] [-y]
 ##   -h    Print this help message
@@ -70,4 +71,3 @@ printf '  %-11s %d removed\n' 'images:'     "$((images_before - images_after))"
 printf '  %-11s %d removed\n' 'volumes:'    "$((volumes_before - volumes_after))"
 printf '  %-11s %d removed\n' 'networks:'   "$((networks_before - networks_after))"
 printf '  %-11s %s reclaimed\n' 'space:'    "${space:-0B}"
-{{- end -}}
