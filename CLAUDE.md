@@ -102,7 +102,7 @@ Dotfiles are written to support multiple profiles (e.g. `work`, `personal`). Pro
 Use separate `if` blocks rather than `if/else` so each profile's section is independently readable:
 
 ```
-{{- if or (eq .profile "personal") (eq .profile "") }}
+{{- if eq .profile "personal" }}
 # personal-only config
 {{- end }}
 
@@ -110,6 +110,37 @@ Use separate `if` blocks rather than `if/else` so each profile's section is inde
 # work-only config
 {{- end }}
 ```
+
+**Never use `eq .profile ""` (or any other check that treats an unset/empty profile as a valid case).** An empty profile means `chezmoi.toml` is missing or misconfigured on this machine — that is an error, not a fourth profile, and setup must fail immediately rather than quietly rendering as if it were `personal` or any other profile. `.chezmoiignore` enforces this globally:
+
+```
+{{- if not .profile }}
+{{ fail "profile is not set in chezmoi.toml — set `profile` to personal, work, personal-bazzite, or personal-fedora before running apply" }}
+{{- end }}
+```
+
+Because `.chezmoiignore` is read on every chezmoi command, this guard means no other template needs to (and none should) special-case an empty profile — by the time any other template renders, `.profile` is guaranteed non-empty. If you see `eq .profile ""` anywhere, it's leftover from before this guard existed and should be deleted, not treated as a legitimate branch.
+
+**Never use a bare `else` (or catch-all `else if`) to fall back to a "default" case.** Write one explicit `if` per profile that should get a given piece of config. A profile that matches none of them should render nothing for that block — not silently inherit some other profile's behavior. Implicit defaults are exactly how machine-specific values (a macOS-only path, a brew-only command) leak onto profiles that were never meant to have them:
+
+```
+# Bad — new profiles silently inherit the mac path with no warning:
+{{- if or (eq .profile "personal") (eq .profile "work") }}
+  IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+{{- else }}
+  IdentityAgent "~/.1password/agent.sock"
+{{- end }}
+
+# Good — every profile that gets this line is named explicitly; anything else gets none:
+{{- if or (eq .profile "personal") (eq .profile "work") }}
+  IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+{{- end }}
+{{- if or (eq .profile "personal-fedora") (eq .profile "personal-bazzite") }}
+  IdentityAgent "~/.1password/agent.sock"
+{{- end }}
+```
+
+This applies to `.chezmoiignore` blocks and shell script branches (e.g. `run_onchange_install-packages.sh.tmpl`'s package manager selection) just as much as inline template conditionals. When adding a new profile, its config gaps should show up as *missing* config (or a script that visibly no-ops), never as another profile's config applied by accident.
 
 **When to split vs combine:** Use a single file with `if` blocks when profile differences are small. Use separate files per profile when differences are large enough that a single file becomes hard to follow.
 

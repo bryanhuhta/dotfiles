@@ -1,0 +1,32 @@
+# Packages installed via `dnf install` on dnf-based profiles (see
+# run_onchange_install-packages.sh.tmpl). This file is only used on profiles
+# whose install script invokes dnf.
+#
+# One package per line. Comments and blank lines are ignored.
+
+{{ if eq .profile "personal-fedora" -}}
+# Personal tools
+
+# Development tools
+git                  # Version control system
+neovim               # Neovim, of course
+zsh                  # Shell (needed before installing oh-my-zsh)
+
+# Neovim dependencies
+fzf                  # Fuzzy finder (used by the nvim fzf-lua plugin)
+the_silver_searcher  # ag (used by nvim's :grep, see grepprg in init.lua)
+tree-sitter-cli      # Compiles nvim-treesitter grammars
+
+# Neovim language servers
+clang-tools-extra    # Provides clangd, the C/C++ language server
+gopls                # Go language server
+rust-analyzer        # Rust language server
+
+# Not packaged for Fedora — install separately if these languages come up:
+#   zls (Zig language server): build from https://github.com/zigtools/zls
+#   jdtls (Java language server): install via mason.nvim, or an Eclipse JDT LS release
+#   typescript-language-server: `npm install -g typescript-language-server typescript`
+#     once node is set up via nvm
+#
+# sourcekit-lsp (Swift) is macOS-only (ships with Xcode) and is never needed here.
+{{- end }}

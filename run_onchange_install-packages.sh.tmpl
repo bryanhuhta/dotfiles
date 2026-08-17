@@ -1,33 +1,40 @@
 #!/bin/bash
 ## Install packages declared for the active profile.
 ##
-## brew-based profiles read from ~/.Brewfile via `brew bundle`. Other
-## profiles install packages by listing them inline below.
+## brew-based profiles read from ~/.Brewfile via `brew bundle`. dnf-based
+## profiles read from ~/.dnf-packages via `dnf install`.
 ##
-## chezmoi re-runs this script whenever its rendered content changes. For
-## brew profiles, the Brewfile's sha is embedded as a comment so edits to
-## the Brewfile also trigger a re-run.
+## chezmoi re-runs this script whenever its rendered content changes. The
+## package file's sha is embedded as a comment so edits to it also trigger
+## a re-run.
 ##
 ## Applying converges only: missing packages are installed, but packages
 ## that are already installed are left at their current version. Upgrade
-## intentionally with `brew bundle upgrade --global` or `brew upgrade`.
+## intentionally with `brew bundle upgrade --global` / `brew upgrade`, or
+## `dnf upgrade`.
+##
+## Profiles not listed below get no package installation at all — add an
+## explicit branch here rather than falling back to a default.
 
 set -euo pipefail
 
-export HOMEBREW_NO_AUTO_UPDATE=1
-
 {{ if or (eq .profile "personal") (eq .profile "work") -}}
+export HOMEBREW_NO_AUTO_UPDATE=1
 # Brewfile sha: {{ include "dot_Brewfile.tmpl" | sha256sum }}
 /opt/homebrew/bin/brew bundle install --global --no-upgrade
 {{- else if eq .profile "personal-bazzite" -}}
+export HOMEBREW_NO_AUTO_UPDATE=1
 # Brewfile sha: {{ include "dot_Brewfile.tmpl" | sha256sum }}
 /home/linuxbrew/.linuxbrew/bin/brew bundle install --global --no-upgrade
-{{- else -}}
-# Example apt branch — replace with the real profile name when one exists.
-# sudo apt-get update
-# sudo apt-get install -y \
-#   neovim \
-#   silversearcher-ag \
-#   jq
-echo "install-packages: no package manager configured for profile '{{ .profile }}'" >&2
+{{- else if eq .profile "personal-fedora" -}}
+# dnf-packages sha: {{ include "dot_dnf-packages.tmpl" | sha256sum }}
+# Strip trailing "# comment" text (not just whole-line comments) before
+# word-splitting into args — a bare grep -v '^#' would leave inline comments
+# in place and pass their words to dnf as if they were package names.
+packages=$(sed 's/#.*//' "$HOME/.dnf-packages" | xargs || true)
+if [[ -n "$packages" ]]; then
+  sudo dnf install -y $packages
+else
+  echo "install-packages: ~/.dnf-packages has no packages listed yet" >&2
+fi
 {{- end }}
