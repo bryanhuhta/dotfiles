@@ -1,0 +1,164 @@
+#!/usr/bin/python3
+"""Run the vendored third-party installers declared in .chezmoidata/installers.toml.
+
+Do not edit the installer list here. It is rendered from installers.toml, the
+same way the Homebrew list is rendered into install-packages.sh.
+
+Each installer declares prerequisites, and one whose prerequisites are unmet is
+skipped with a warning rather than failing the apply — a fresh machine can
+finish applying and pick the installer up on a later run, once (for example)
+`gh auth login` has happened. That retry is why this is a plain `run_` script
+and not `run_onchange_`: it runs on every apply and decides for itself whether
+there is work to do.
+
+An installer runs when its stamp under $XDG_STATE_HOME/chezmoi/installers is
+missing or stale. The stamp covers the vendored script's contents plus its
+declared prerequisites and environment, so editing any of them re-runs the
+installer. Force a re-run by deleting the stamp.
+
+The `after_` attribute makes this run after the file phase and after
+install-node.sh, so nvm, node and the Homebrew packages all exist.
+
+Runs under /usr/bin/python3 (the Xcode Command Line Tools build, 3.9) rather
+than `/usr/bin/env python3`, so the runner does not depend on PATH or on a
+Homebrew python that may be mid-upgrade. Keep the code 3.9-compatible.
+"""
+
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+{{ $installers := list -}}
+{{ range .installers -}}
+{{   $installers = append $installers (merge (dict "hash" (include (printf ".installers/%s" .script) | sha256sum)) .) -}}
+{{ end -}}
+INSTALLERS_DIR = Path("{{ .chezmoi.sourceDir }}") / ".installers"
+
+STATE_DIR = (
+    Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
+    / "chezmoi"
+    / "installers"
+)
+
+INSTALLERS = json.loads(r"""
+{{ $installers | toPrettyJson }}
+""")
+
+
+def nvm_bin_dir():
+    """Return the bin directory of the nvm default node, or None.
+
+    nvm is a shell function, so there is nothing to source here; ~/.nvm is read
+    directly. install-node.sh pins the default with `nvm alias default
+    <version>`, so alias/default holds a literal version. Anything else (a
+    symbolic alias such as lts/*) falls back to the highest installed version.
+    """
+    versions = Path.home() / ".nvm" / "versions" / "node"
+    if not versions.is_dir():
+        return None
+
+    default = Path.home() / ".nvm" / "alias" / "default"
+    if default.is_file():
+        name = default.read_text().strip()
+        candidate = versions / (name if name.startswith("v") else "v" + name)
+        if (candidate / "bin").is_dir():
+            return candidate / "bin"
+
+    installed = sorted(
+        (path for path in versions.iterdir() if (path / "bin").is_dir()),
+        key=lambda path: [
+            int(part) if part.isdigit() else -1
+            for part in path.name.lstrip("v").split(".")
+        ],
+    )
+    return installed[-1] / "bin" if installed else None
+
+
+def fingerprint(installer):
+    """Identify what was installed, so a change to any of it forces a re-run."""
+    payload = {
+        "hash": installer["hash"],
+        "requires": installer.get("requires", []),
+        "preflight": installer.get("preflight", []),
+        "env": installer.get("env", {}),
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+
+
+def unmet_prerequisites(installer):
+    reasons = [
+        f"{command} not found on PATH"
+        for command in installer.get("requires", [])
+        if shutil.which(command) is None
+    ]
+    if reasons:
+        # Preflight commands invoke the required commands, so they are only
+        # worth running once those exist.
+        return reasons
+
+    for check in installer.get("preflight", []):
+        completed = subprocess.run(
+            check,
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if completed.returncode != 0:
+            reasons.append(f"{check} failed")
+    return reasons
+
+
+def run(installer):
+    name = installer["name"]
+    stamp = STATE_DIR / name
+    current = fingerprint(installer)
+
+    if stamp.is_file() and stamp.read_text().strip() == current:
+        return
+
+    reasons = unmet_prerequisites(installer)
+    if reasons:
+        print(f"installers: skipping {name}, prerequisites unmet:", file=sys.stderr)
+        for reason in reasons:
+            print(f"  - {reason}", file=sys.stderr)
+        if installer.get("hint"):
+            print(f"  {installer['hint']}", file=sys.stderr)
+        print("  Resolve, then run 'chezmoi apply' again.", file=sys.stderr)
+        return
+
+    script = INSTALLERS_DIR / installer["script"]
+    print(f"installers: running {name}", flush=True)
+    completed = subprocess.run(
+        ["sh", str(script)],
+        env=dict(os.environ, **installer.get("env", {})),
+    )
+    if completed.returncode != 0:
+        print(
+            f"installers: {name} failed (exit {completed.returncode})",
+            file=sys.stderr,
+        )
+        sys.exit(completed.returncode)
+
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    stamp.write_text(current + "\n")
+    print(f"installers: {name} installed")
+
+
+def main():
+    # nvm-managed node is not on PATH in a non-interactive process. Put the
+    # default version there so installers that require node find it.
+    node_bin = nvm_bin_dir()
+    if node_bin is not None:
+        os.environ["PATH"] = f"{node_bin}{os.pathsep}{os.environ['PATH']}"
+
+    for installer in INSTALLERS:
+        run(installer)
+
+
+main()

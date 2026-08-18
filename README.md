@@ -92,6 +92,45 @@ Homebrew and brew's `yarn` would drag in brew's own `node`):
 - **yarn** comes from Corepack (bundled with node), enabled by the same
   script — there is no separate yarn install.
 
+## Installer scripts
+
+Some tools ship no Homebrew formula or cask, only a `curl … | sh` installer.
+Those are managed on the `work-mac` profile the same way packages are — a
+declarative list plus one script that applies it — but with the installer
+itself vendored into the repository instead of fetched at apply time:
+
+- **The scripts** live in `work-mac/.installers/<tool>/`. Source entries
+  beginning with `.` are invisible to chezmoi, so nothing there is written into
+  `$HOME`; the copies exist to be read and diffed before they run. See
+  `work-mac/.installers/README.md` for how to refresh one.
+- **The list** is `work-mac/.chezmoidata/installers.toml`. Each entry names the
+  vendored script, its upstream URL, the commands that must already be on
+  `PATH` (`requires`), commands that must succeed (`preflight`, e.g.
+  `gh auth status`), and environment variables to set for the installer
+  process (`env`).
+- **The runner** is `work-mac/.chezmoiscripts/run_after_run-installers.py`. It
+  puts the nvm default node on `PATH` (so `node` resolves), checks each
+  installer's prerequisites, and runs the ones whose prerequisites are met.
+
+An installer with unmet prerequisites is **skipped with a warning, not a
+failure** — a fresh machine can finish applying and pick the installer up on a
+later run, once `gh auth login` has happened. That retry is why the runner is a
+plain `run_` script: it runs on every apply and decides for itself whether
+there is work to do, using a stamp under
+`~/.local/state/chezmoi/installers/<name>`. The stamp covers the vendored
+script's contents plus the entry's `requires` and `env`, so changing any of
+them re-runs the installer; `rm ~/.local/state/chezmoi/installers/<name>`
+forces a re-run.
+
+Currently managed this way:
+
+| Tool                                                        | Prerequisites                          |
+|-------------------------------------------------------------|----------------------------------------|
+| [Graft](https://github.com/grafana/plugin-graft) (`work-mac`) | `curl`, `gh`, `git`, `node`, `unzip`, an authenticated `gh`, and a supported browser |
+
+Graft keeps itself up to date after install (`graft-update`), so the vendored
+script only needs refreshing when the installer itself changes.
+
 ## Keychain secrets
 
 Secrets are never stored in this repository. Scripts read them from the

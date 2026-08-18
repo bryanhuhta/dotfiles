@@ -252,6 +252,41 @@ If a script is only for one profile, ask the user whether to gate it with a chez
 
 ---
 
+## Python Scripts
+
+Some chezmoi scripts are easier to get right in Python than in bash — the installer runner is one. Every Python script in this repository, `.chezmoiscripts/` runners included, follows these rules without exception.
+
+- **Always `#!/usr/bin/python3`** — the system interpreter shipped with the Xcode Command Line Tools. Never `#!/usr/bin/env python3`, and never a Homebrew, pyenv, asdf, or virtualenv interpreter. A chezmoi script runs during `apply` with whatever environment the machine happens to have; the system interpreter is the only one guaranteed to be present, guaranteed to predate Homebrew, and immune to a half-finished `brew upgrade python`.
+- **Standard library only. NEVER import a third-party library, under any circumstances.** No `pip install`, no vendored packages, no virtualenv, no exceptions "just this once". These scripts run on machines that may have nothing installed yet, so a third-party import is a bootstrap failure waiting to happen. If something appears to require a third-party library, it does not belong in a chezmoi script — solve it another way or raise it with the user.
+- **Target the system interpreter's version.** Check it with `/usr/bin/python3 --version` (currently 3.9) and write code that runs there. macOS moves that version on its own schedule, so never assume anything newer is available.
+- **Stay on the paved path.** Prefer the boring, long-stable parts of the stdlib: `subprocess.run`, `pathlib`, `json`, `argparse`, `os`, `shutil`, `hashlib`. Avoid APIs that are newly added, provisional, or deprecated, and avoid clever corners of the stdlib when an obvious call does the same job. These scripts are read years later on an unfamiliar machine — predictable beats modern.
+- **Check that it renders and parses** before telling the user to apply:
+
+  ```sh
+  chezmoi execute-template < .chezmoiscripts/<script>.py.tmpl \
+    | /usr/bin/python3 -c 'import ast, sys; ast.parse(sys.stdin.read())'
+  ```
+
+---
+
+## Vendored Installers
+
+Tools with no Homebrew formula or cask are installed from a vendored copy of their `curl | sh` installer, never from the network at apply time.
+
+- The script lives in `<profile>/.installers/<tool>/`. Entries starting with `.` are invisible to chezmoi, so nothing there reaches `$HOME`.
+- `<profile>/.chezmoidata/installers.toml` declares each installer: `name`, `description`, `script` (relative to `.installers/`), `upstream`, `requires` (commands that must be on `PATH`), and optionally `preflight` (commands that must exit 0), `hint`, and `env`.
+- `<profile>/.chezmoiscripts/run_after_run-installers.py.tmpl` renders the list into a Python script and runs it, under the rules in **Python Scripts** above.
+
+When adding an installer, **always ask the user** which profile it belongs to. Then vendor the script, add a row to `.installers/README.md`, add the entry to `installers.toml`, and update the table in the repository `README.md`. Never add an installer that fetches and pipes a remote script.
+
+The runner is deliberately `run_` and not `run_onchange_`: it must run on every apply so an installer skipped for unmet prerequisites is retried later. It tracks its own work with stamps under `~/.local/state/chezmoi/installers/`, fingerprinted from the vendored script's contents plus the entry's `requires` and `env`.
+
+Unmet prerequisites warn and skip; they never fail the apply. Keep it that way — failing would block `chezmoi apply` on a fresh machine where, for example, `gh auth login` has not run yet.
+
+If an installer would write to a chezmoi-managed file, neutralize it through the entry's `env` rather than by patching the vendored script — a verbatim copy stays diffable against upstream. (Graft appends a `PATH` line to the profile of `$SHELL`, so its entry sets `SHELL=/bin/sh` to redirect that write from the managed `~/.zshrc` to the unmanaged, zsh-ignored `~/.profile`.)
+
+---
+
 ## Key Commands Reference
 
 | Command                           | Description                                               |

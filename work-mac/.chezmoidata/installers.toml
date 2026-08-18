@@ -1,0 +1,51 @@
+# Third-party installer scripts for work-mac, run by
+# .chezmoiscripts/run_after_run-installers.py.
+#
+# Homebrew handles anything with a formula or cask (see packages.toml). This
+# list covers the tools that only ship a `curl | sh` installer. Rather than
+# piping those from the network, the script is vendored under .installers/
+# so it is reviewed, diffable, and pinned to a known checksum — the runner
+# executes the local copy and never fetches the installer itself.
+#
+# Each entry declares the prerequisites the installer needs, so an installer
+# never runs against a half-built machine. Unmet prerequisites skip the
+# installer with a warning; the next `chezmoi apply` retries it.
+#
+# Fields:
+#   name        stamp name under $XDG_STATE_HOME/chezmoi/installers
+#   description what the tool is
+#   script      path to the vendored script, relative to .installers/
+#   upstream    where the vendored copy came from, for refreshing it
+#   requires    commands that must be on PATH before the installer runs
+#   preflight   commands that must exit 0 before the installer runs
+#   hint        printed when a prerequisite is unmet
+#   env         environment variables set for the installer process
+
+[[installers]]
+    name = "graft"
+    description = "Grafana Graft — local server plus browser extension for plugin development"
+    script = "graft/install.sh"
+    upstream = "https://grafana.github.io/plugin-graft/install.sh"
+
+    # node comes from nvm (the runner puts it on PATH), the rest from
+    # packages.toml.
+    # A supported browser is also required, which the firefox cask provides.
+    requires = ["curl", "gh", "git", "node", "unzip"]
+
+    # Graft downloads its release artifacts with `gh release download`. Without
+    # an authenticated gh it would launch an interactive login mid-apply.
+    preflight = ["gh auth status"]
+
+    hint = "Run 'gh auth login' first; the rest come from packages.toml."
+
+    [installers.env]
+        # Answer the installer's dependency prompt automatically. Nothing is
+        # actually installed by it — `requires` above guarantees the
+        # dependency scan finds everything already present.
+        GRAFT_NONINTERACTIVE = "1"
+
+        # The installer appends a PATH line to the profile of $SHELL, which
+        # for zsh is the chezmoi-managed ~/.zshrc. Pointing it at sh sends
+        # that write to ~/.profile instead, which zsh never reads and chezmoi
+        # does not manage. ~/.local/bin is already on PATH via .zprofile.
+        SHELL = "/bin/sh"

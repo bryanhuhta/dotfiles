@@ -156,6 +156,12 @@ Apps and state that live outside Homebrew and chezmoi:
     (kubectl needs it to authenticate against GKE clusters; it lands in
     the `share/google-cloud-sdk/bin` path that `.zprofile` adds)
   - `claude` (first launch authenticates and creates its Keychain items)
+- **Graft** (`work-mac`): installed by the vendored installer in
+  `work-mac/.installers/`, but only once `gh auth login` has run — it downloads
+  its release artifacts with `gh`. Until then every apply skips it with a
+  warning naming the unmet prerequisite. After authenticating, run
+  `chezmoi apply` again and it installs. See "Installer scripts" in
+  `README.md`.
 - **Keychain secrets**: recreate the items listed in `README.md`. The
   `gcx-sandbox` token must be added manually:
 
