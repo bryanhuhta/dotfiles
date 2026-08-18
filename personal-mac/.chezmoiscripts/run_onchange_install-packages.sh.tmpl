@@ -6,13 +6,21 @@
 #
 # Converges only: missing packages are installed, already-installed packages
 # are left at their current version, and a package removed from the list is
-# NOT uninstalled. Upgrade with `brew upgrade`.
+# NOT uninstalled. Upgrade deliberately with `brew upgrade`.
+#
+# `brew bundle install` installs *and upgrades* by default, so an edit to
+# packages.toml would otherwise upgrade every outdated formula and cask on the
+# machine — restarting running programs and moving versions that were pinned by
+# choice. --no-upgrade holds installed packages where they are. (`brew install`
+# may still pull a dependency forward if a genuinely new package needs it.)
 
 set -euo pipefail
 
+# Skips the metadata refresh only; --no-upgrade is what protects installed
+# packages from being upgraded.
 export HOMEBREW_NO_AUTO_UPDATE=1
 
-/opt/homebrew/bin/brew bundle --file=/dev/stdin <<'EOF'
+/opt/homebrew/bin/brew bundle install --no-upgrade --file=/dev/stdin <<'EOF'
 {{ range .packages.taps -}}
 tap {{ . | quote }}
 {{ end -}}

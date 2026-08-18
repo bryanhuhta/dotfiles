@@ -104,6 +104,10 @@ chezmoi apply
 package list is rendered into the install script, so there is no `~/.Brewfile`
 on disk.
 
+The bundle run passes `--no-upgrade`, so it only installs what is missing and
+leaves already-installed packages at their current versions. Upgrading is a
+separate, deliberate `brew upgrade`.
+
 Stay at the keyboard: the `dotnet-sdk` cask installs via a macOS pkg and
 asks for the admin password partway through (`sudo -v` primes it, but the
 first bundle run is long and the sudo timestamp can expire). If the run
