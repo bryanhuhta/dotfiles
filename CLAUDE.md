@@ -97,80 +97,33 @@ chezmoi data
 
 ## Profiles
 
-Dotfiles are written to support multiple profiles (e.g. `work`, `personal`). Profile is set in the machine-local config and controls which sections of templates are rendered.
+There are two profiles: `personal-mac` and `work-mac`. Each has its own source directory at the top of the repository; the machine-local config sets `sourceDir` to select one, and `profile` to name it.
 
-Use separate `if` blocks rather than `if/else` so each profile's section is independently readable:
+### Per-profile source directories (the Mac profiles)
 
-```
-{{- if eq .profile "personal" }}
-# personal-only config
-{{- end }}
+`personal-mac/` and `work-mac/` are self-contained chezmoi source directories at the top of the repository. The machine-local `chezmoi.toml` points `sourceDir` at one of them, so chezmoi never sees the other profile's files at all.
 
-{{- if eq .profile "work" }}
-# work-only config
-{{- end }}
-```
+Inside a profile directory:
 
-**Never use `eq .profile ""` (or any other check that treats an unset/empty profile as a valid case).** An empty profile means `chezmoi.toml` is missing or misconfigured on this machine — that is an error, not a fourth profile, and setup must fail immediately rather than quietly rendering as if it were `personal` or any other profile. `.chezmoiignore` enforces this globally:
+- There are **no `.profile` conditionals**. The directory is the condition. A file that needs to differ per profile simply differs between the two directories, and a file only one profile wants exists only in that directory.
+- It owns its own `.chezmoiignore`, `.chezmoidata.toml`, `.chezmoidata/`, `.chezmoiexternal.toml`, and `.chezmoiscripts/`. The root copies of those files do not apply.
+- Templating is reserved for machine data (`.git.name`, `.git.email`, `hasKey .git "signingkey"`). If a file has no template actions left after de-templating, drop its `.tmpl` suffix.
+- Repository-root assets (`claude-home/`, `zed_settings.json`, the Docker build contexts) live one level up. Reach them with `{{ .chezmoi.sourceDir | dir }}` in a template and `$(dirname $(chezmoi source-path))` in a script — a bare `.chezmoi.sourceDir` resolves inside the profile directory and silently produces a dangling symlink or a missing build context.
+- Scripts belong in `.chezmoiscripts/`, not at the top level, so they run without also being written into `$HOME`.
 
-```
-{{- if not .profile }}
-{{ fail "profile is not set in chezmoi.toml — set `profile` to personal or work before running apply" }}
-{{- end }}
-```
+When changing something that both Macs share, make the edit in both directories. There is deliberately no shared layer between them.
 
-Because `.chezmoiignore` is read on every chezmoi command, this guard means no other template needs to (and none should) special-case an empty profile — by the time any other template renders, `.profile` is guaranteed non-empty. If you see `eq .profile ""` anywhere, it's leftover from before this guard existed and should be deleted, not treated as a legitimate branch.
+### The repository root
 
-**Never use a bare `else` (or catch-all `else if`) to fall back to a "default" case.** Write one explicit `if` per profile that should get a given piece of config. A profile that matches none of them should render nothing for that block — not silently inherit some other profile's behavior. Implicit defaults are exactly how machine-specific values (a macOS-only path, a brew-only command) leak onto profiles that were never meant to have them:
+Nothing applies from the repository root: it holds the two profile directories, the shared assets (`claude-home/`, `zed_settings.json`, the Docker build contexts), and the documentation. Root `.chezmoiignore` is a single `{{ fail }}` — chezmoi's default source directory is the repository root, so a machine that forgets `sourceDir` would otherwise apply `personal-mac/` and `work-mac/` into `$HOME` as literal directories.
 
-```
-# Bad — a bare else hands every profile that isn't "personal" the work value,
-# including any profile added later that was never considered here:
-{{- if eq .profile "personal" }}
-  setting = personal-value
-{{- else }}
-  setting = work-value
-{{- end }}
+### Adding a profile
 
-# Good — every profile that gets a value is named explicitly; anything else gets none:
-{{- if eq .profile "personal" }}
-  setting = personal-value
-{{- end }}
-{{- if eq .profile "work" }}
-  setting = work-value
-{{- end }}
-```
+Create a new top-level directory, populate it, and point the new machine's `sourceDir` at it. Do not reintroduce `{{ if eq .profile ... }}` gating — there are no profile conditionals anywhere in this repository, and profile differences are expressed by which directory a file lives in. `.profile` remains in the machine config as a label (it is what root `.chezmoiignore` reports in its error), not as a switch templates branch on.
 
-This applies to `.chezmoiignore` blocks and shell script branches (e.g. `run_onchange_install-packages.sh.tmpl`'s package manager selection) just as much as inline template conditionals. When adding a new profile, its config gaps should show up as *missing* config (or a script that visibly no-ops), never as another profile's config applied by accident.
+The one rule that still bites: **`.chezmoiexternal.toml` and `.chezmoidata*` are not covered by `.chezmoiignore`.** For ordinary files and scripts, chezmoi checks the ignore list *before* evaluating a template's contents, so an ignored template never runs. Those two are executed during the source-directory walk, before `.chezmoiignore` is read. If one of them calls something side-effecting or environment-dependent (`onepasswordRead`, `output`, `exec` — anything that shells out or depends on machine state), no ignore entry can stop it from running. Note that `chezmoi cat` and `chezmoi execute-template` bypass ignores entirely, so neither is evidence about what `apply` would do.
 
-**Never gate an entire file's existence by wrapping all of its content in one `{{ if }}`.** If a file is only relevant to one (or a few) profiles, use `.chezmoiignore` to exclude its target on every other profile instead. A whole-file `{{ if }}` still creates the file — empty, but present and marked as managed — everywhere the condition is false; `.chezmoiignore` is what actually keeps it off other profiles:
-
-```
-# Bad — renders (and "runs", for a script) as an empty no-op on every other profile:
-{{ if eq .profile "work" -}}
-#!/bin/bash
-some-work-only-setup-command
-...
-{{- end }}
-
-# Good — the file only needs to exist for one profile, so gate its existence in .chezmoiignore,
-# and drop the .tmpl suffix from the file entirely if nothing inside it needs to be templated:
-#!/bin/bash
-some-work-only-setup-command
-...
-```
-```
-# .chezmoiignore
-{{- if eq .profile "personal" }}
-install-work-tool.sh
-{{- end }}
-```
-
-**Exception: if the file's template body calls something side-effecting or environment-dependent** (`onepasswordRead`, `output`, `exec`, or similar — anything that shells out or depends on machine state), keep an in-template `{{ if }}` guard around that specific call. `.chezmoiignore` filters the target only *after* the whole template has already been rendered — it cannot stop the call itself from being evaluated on a profile where it would fail (e.g. an `op://` reference to a vault item that doesn't exist there, or `op` not being installed at all). Verified empirically: a `.chezmoiignore`-excluded template's `{{ fail }}` call still fired when rendered directly. `hasKey`/`eq`/plain data lookups have no such risk and should still move to `.chezmoiignore`, same as any other whole-file gate — only calls with actual side effects need the in-template guard. When you do keep one, also add the file to `.chezmoiignore` for the other profiles anyway, as a defense-in-depth backstop and to document the intent (see `private_dot_ssh/wrightauto.pub.tmpl` for a worked example, including the comment explaining why).
-
-**When to split vs combine:** Use a single file with `if` blocks when profile differences are small. Use separate files per profile when differences are large enough that a single file becomes hard to follow.
-
-Profiles are intentionally decoupled from hostnames or other machine identifiers. Never gate behavior on `.chezmoi.hostname` or similar — the profile variable exists precisely so config stays valid when hardware changes.
+Profiles are intentionally decoupled from hostnames or other machine identifiers. Never gate behavior on `.chezmoi.hostname` or similar — the profile directory exists precisely so config stays valid when hardware changes.
 
 ---
 
@@ -192,9 +145,9 @@ Common patterns:
 # Interpolate a value
 email = {{ .git.email }}
 
-# Conditional block
-{{- if eq .profile "work" }}
-export WORK_ONLY=1
+# Conditional on machine data (there are no profile conditionals — see Profiles)
+{{- if hasKey .git "signingkey" }}
+	signingkey = {{ .git.signingkey }}
 {{- end }}
 ```
 

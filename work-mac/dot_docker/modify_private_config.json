@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+
+managed='{
+  "currentContext": "orbstack"
+}'
+
+managed=$(jq '. + {"credsStore": "osxkeychain"}' <<<"$managed")
+
+current=$(cat)
+[[ -z "$current" ]] && current='{}'
+
+jq --argjson managed "$managed" '. * $managed' <<<"$current"

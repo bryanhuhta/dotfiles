@@ -17,13 +17,13 @@ The SSH key for GitHub lives in 1Password, so it must be installed and
 unlocked before anything can clone over SSH. It is installed by direct
 download here because it is needed before Homebrew exists (a `1password`
 cask does exist; the `1password-cli` companion is installed later by the
-Brewfile).
+profile's package list).
 
 1. Download from <https://1password.com/downloads/mac> and install.
 2. Sign in to the account(s).
 3. Enable the SSH agent: Settings → Developer → **Use the SSH agent**.
 4. Optionally enable **Integrate with 1Password CLI** (the `op` cask is
-   installed later by the Brewfile).
+   installed later by the profile's package list).
 
 The dotfiles' `~/.ssh/config` points at the 1Password agent socket, but that
 file is not applied yet. For the initial clone, point SSH at the agent
@@ -42,14 +42,28 @@ Verify with `ssh -T git@github.com` (1Password will prompt to authorize).
 eval "$(/opt/homebrew/bin/brew shellenv)"
 ```
 
-## 4. chezmoi machine config
+## 4. Clone the repository
+
+Each profile has its own source directory at the top of the repository, so the
+repository is cloned first and `sourceDir` is pointed at the right one in the
+next step. Clone directly rather than using `chezmoi init`: `init` would clone
+into whatever `sourceDir` names, and it rewrites `~/.config/chezmoi/chezmoi.toml`
+from a template, discarding any values that template does not emit.
+
+```sh
+git clone git@github.com:bryanhuhta/dotfiles.git ~/.local/share/chezmoi
+```
+
+## 5. chezmoi machine config
 
 Templates require machine-local data before the first apply. Create
 `~/.config/chezmoi/chezmoi.toml`:
 
 ```toml
+sourceDir = "~/.local/share/chezmoi/work-mac"
+
 [data]
-    profile = "work"
+    profile = "work-mac"
 
 [data.git]
     name = "Your Name"
@@ -57,11 +71,16 @@ Templates require machine-local data before the first apply. Create
     signingkey = "ssh-ed25519 AAAA..."
 ```
 
+`sourceDir` and `profile` must agree — `personal-mac`/`personal-mac`, or
+`work-mac`/`work-mac`. Both are required: nothing applies from the repository
+root, and chezmoi's default source directory is the root, so omitting
+`sourceDir` fails with an explanatory error.
+
 `signingkey` is the **public** key of the 1Password SSH key (copy it from the
 key's item in 1Password). See `README.md` for the full list of supported
 variables.
 
-## 5. oh-my-zsh
+## 6. oh-my-zsh
 
 `.zshrc` sources oh-my-zsh but nothing installs it on macOS profiles. Install
 it now, before `chezmoi apply`, because its installer writes its own `.zshrc`
@@ -71,18 +90,19 @@ it now, before `chezmoi apply`, because its installer writes its own `.zshrc`
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc
 ```
 
-## 6. Init and apply
+## 7. Apply
 
 ```sh
 brew install chezmoi
-chezmoi init git@github.com:bryanhuhta/dotfiles.git
 chezmoi diff
 sudo -v
 chezmoi apply
 ```
 
-`apply` runs `brew bundle --global`, which installs everything declared in
-`~/.Brewfile` for the active profile (see `dot_Brewfile.tmpl` for the list).
+`apply` runs `brew bundle`, which installs everything declared in the profile's
+`.chezmoidata/packages.toml` (e.g. `work-mac/.chezmoidata/packages.toml`). The
+package list is rendered into the install script, so there is no `~/.Brewfile`
+on disk.
 
 Stay at the keyboard: the `dotnet-sdk` cask installs via a macOS pkg and
 asks for the admin password partway through (`sudo -v` primes it, but the
@@ -90,11 +110,11 @@ first bundle run is long and the sudo timestamp can expire). If the run
 fails partway for any reason, both `chezmoi apply` and `brew bundle` are
 idempotent - fix the cause and rerun `chezmoi apply`.
 
-## 7. Post-apply
+## 8. Post-apply
 
 Apps and state that live outside Homebrew and chezmoi:
 
-- **OrbStack** (docker runtime): installed by the Brewfile. Launch it once so
+- **OrbStack** (docker runtime): installed by the package list. Launch it once so
   `~/.orbstack` exists (`.zprofile` and `~/.ssh/config` reference it).
 - **UTC Time** (menu bar UTC clock): App Store only — install from
   <https://apps.apple.com/us/app/utc-time/id1538245904>.
@@ -106,16 +126,13 @@ Apps and state that live outside Homebrew and chezmoi:
   tailscale up
   ```
 
-- **nvm + node**: install with the official script (it creates `~/.nvm`,
-  which `.zprofile` sources). `PROFILE=/dev/null` is required - without it
-  the installer appends lines to the chezmoi-managed `~/.zshrc`, breaking
-  `chezmoi verify`. Then install a node and the TypeScript tooling nvim's
-  `ts_ls` LSP expects:
+- **nvm + node**: both are managed by chezmoi (`.chezmoiexternal.toml` checks
+  out the pinned nvm release, `.chezmoiscripts/run_onchange_after_install-node.sh`
+  installs the pinned node and enables Corepack), so nothing to do by hand.
+  The TypeScript tooling nvim's `ts_ls` LSP expects is not managed:
 
   ```sh
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | PROFILE=/dev/null bash
   source ~/.zprofile
-  nvm install --lts
   npm install -g typescript typescript-language-server
   ```
 - **Ghostty font**: the managed config uses "Ubuntu Mono derivative
@@ -153,10 +170,13 @@ Apps and state that live outside Homebrew and chezmoi:
   is already sourced by `.zprofile`), then
   `rustup component add rust-analyzer clippy`.
 
-## 8. Verify
+## 9. Verify
 
 ```sh
 chezmoi doctor
 chezmoi verify
-brew bundle check --global
 ```
+
+`chezmoi doctor` only checks that `sourceDir` exists, not that it is the right
+one — confirm with `chezmoi data | jq -r '.chezmoi.sourceDir, .profile'` that
+both name the intended profile.

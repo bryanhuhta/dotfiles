@@ -15,5 +15,5 @@
   "skipWorkflowUsageWarning": true,
   "theme": "auto",
   "editorMode": "normal",
-  "model": "opus[1m]"
+  "model": "opus"
 }

@@ -1,0 +1,56 @@
+# Homebrew packages for personal-mac, installed by
+# .chezmoiscripts/run_onchange_install-packages.sh.
+#
+# The list is rendered into that script, so editing this file changes the
+# script's content and chezmoi re-runs it on the next apply.
+#
+# Converges only: missing packages are installed, already-installed packages
+# are left at their current version, and a package removed from this list is
+# NOT uninstalled. Upgrade with `brew upgrade`, remove with `brew uninstall`.
+
+[packages]
+
+# No taps needed here, but the key must exist: the install script ranges over
+# it, and chezmoi renders templates with missingkey=error.
+taps = []
+
+brews = [
+  # Base
+  "chezmoi",              # Dotfile manager
+  "fzf",                  # Fuzzy finder (used by the nvim fzf plugin)
+  "jq",                   # Parse JSON from the command line
+  "neovim",               # Neovim, of course
+  "the_silver_searcher",  # ag (better version of grep)
+  "tree",                 # Display directories as trees
+  "tree-sitter-cli",      # Compiles nvim-treesitter grammars
+
+  # Development tools
+  "gh",                   # GitHub cli
+  "git",                  # Version control system
+  "git-lfs",              # Large file storage (gitconfig declares required lfs filters)
+  "go",                   # go programming language
+  "pipx",                 # Python environment manager
+  "zig",                  # Zig programming language
+
+  # Neovim dependencies
+  "gopls",                # Go language server
+  "jdtls",                # Java language server
+  "zls",                  # Zig language server
+]
+
+casks = [
+  # Personal tools
+  "gnucash",        # Double-entry accounting
+
+  # Development tools
+  "claude-code",    # Claude Code
+  "ghostty",        # Terminal emulator
+  "orbstack",       # Docker engine and cli (docker, buildx, compose, credential helper)
+  "zed",            # GUI code editor
+
+  # Productivity tools
+  "firefox",        # Firefox web browser
+  "1password-cli",  # 1Password cli
+  "markedit",       # Markdown reader
+  "rectangle",      # Window manager
+]

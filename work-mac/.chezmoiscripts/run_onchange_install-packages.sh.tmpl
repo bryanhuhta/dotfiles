@@ -1,0 +1,25 @@
+#!/bin/bash
+# Install the Homebrew packages declared in .chezmoidata/packages.toml.
+#
+# Do not edit the package list here. It is rendered from packages.toml, and
+# chezmoi re-runs this script whenever that rendering changes.
+#
+# Converges only: missing packages are installed, already-installed packages
+# are left at their current version, and a package removed from the list is
+# NOT uninstalled. Upgrade with `brew upgrade`.
+
+set -euo pipefail
+
+export HOMEBREW_NO_AUTO_UPDATE=1
+
+/opt/homebrew/bin/brew bundle --file=/dev/stdin <<'EOF'
+{{ range .packages.taps -}}
+tap {{ . | quote }}
+{{ end -}}
+{{ range .packages.brews -}}
+brew {{ . | quote }}
+{{ end -}}
+{{ range .packages.casks -}}
+cask {{ . | quote }}
+{{ end -}}
+EOF

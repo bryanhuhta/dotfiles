@@ -1,0 +1,103 @@
+#!/bin/bash
+## Check video files for codecs incompatible with macOS QuickTime
+## and re-encode in place if needed.
+##
+## Runs ffmpeg/ffprobe via the `utility` Docker container, so input
+## paths must be inside the current directory.
+##
+## Inspects the video and audio streams of each file with ffprobe. If
+## either codec is in the known-incompatible blocklist, the file is
+## re-encoded and the original is replaced. Compatible streams are
+## copied without re-encoding. Originals are only overwritten on
+## success. Files are processed in order; the script stops at the
+## first failure.
+##
+## Blocklisted video codecs: vp9, vp8, av1
+## Blocklisted audio codecs: opus, vorbis
+##
+## Usage: youtube-convert [-h] <input>...
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: youtube-convert <input>..." >&2
+  exit 1
+fi
+
+for input in "$@"; do
+  if [[ ! -f "$input" ]]; then
+    echo "Error: file not found: $input" >&2
+    exit 1
+  fi
+done
+
+if ! command -v utility >/dev/null; then
+  echo "Error: utility not found on PATH" >&2
+  exit 1
+fi
+
+probe_codec() {
+  utility ffprobe -v error -select_streams "$1" \
+    -show_entries stream=codec_name \
+    -of default=nokey=1:noprint_wrappers=1 "$2"
+}
+
+convert_file() {
+  local input="$1"
+
+  local vcodec acodec
+  vcodec="$(probe_codec v:0 "$input")"
+  acodec="$(probe_codec a:0 "$input")"
+
+  local video_args=(-c:v copy)
+  local audio_args=(-c:a copy)
+  local convert=false
+
+  case "$vcodec" in
+    vp9|vp8|av1)
+      echo "Incompatible video codec in $input: $vcodec -> libx264"
+      video_args=(-c:v libx264 -preset slow -crf 23 -pix_fmt yuv420p)
+      convert=true
+      ;;
+    "")
+      echo "Warning: no video stream detected in $input" >&2
+      ;;
+  esac
+
+  case "$acodec" in
+    opus|vorbis)
+      echo "Incompatible audio codec in $input: $acodec -> aac"
+      audio_args=(-c:a aac -b:a 192k)
+      convert=true
+      ;;
+  esac
+
+  if ! $convert; then
+    echo "Codecs are compatible with QuickTime. Nothing to do: $input"
+    return 0
+  fi
+
+  tmp="${input%.*}.converting.$$.mp4"
+
+  utility ffmpeg -nostdin -y -i "$input" \
+    "${video_args[@]}" \
+    "${audio_args[@]}" \
+    -movflags +faststart \
+    "$tmp"
+
+  mv -f "$tmp" "$input"
+  echo "Converted in place: $input"
+}
+
+tmp=""
+trap 'rm -f "$tmp"' EXIT
+
+for input in "$@"; do
+  convert_file "$input"
+done
