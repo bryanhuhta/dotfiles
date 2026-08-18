@@ -17,7 +17,7 @@ declared prerequisites and environment, so editing any of them re-runs the
 installer. Force a re-run by deleting the stamp.
 
 The `after_` attribute makes this run after the file phase and after
-install-node.sh, so nvm, node and the Homebrew packages all exist.
+install-node.py, so nvm, node and the Homebrew packages all exist.
 
 Runs under /usr/bin/python3 (the Xcode Command Line Tools build, 3.9) rather
 than `/usr/bin/env python3`, so the runner does not depend on PATH or on a
@@ -55,7 +55,7 @@ def nvm_bin_dir():
     """Return the bin directory of the nvm default node, or None.
 
     nvm is a shell function, so there is nothing to source here; ~/.nvm is read
-    directly. install-node.sh pins the default with `nvm alias default
+    directly. install-node.py pins the default with `nvm alias default
     <version>`, so alias/default holds a literal version. Anything else (a
     symbolic alias such as lts/*) falls back to the highest installed version.
     """

@@ -85,7 +85,7 @@ Homebrew and brew's `yarn` would drag in brew's own `node`):
   profile. To upgrade, pick a tag from the
   [releases](https://github.com/nvm-sh/nvm/releases), bump the value, and
   run `chezmoi apply`.
-- **node** is installed by `.chezmoiscripts/run_onchange_after_install-node.sh`,
+- **node** is installed by `.chezmoiscripts/run_onchange_after_install-node.py`,
   pinned as `node.version` in the profile's `.chezmoidata.toml`. Bump the value and run
   `chezmoi apply` to install the new version and make it the nvm default
   (old versions are kept; remove them with `nvm uninstall <version>`).

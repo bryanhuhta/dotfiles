@@ -136,7 +136,7 @@ Apps and state that live outside Homebrew and chezmoi:
   ```
 
 - **nvm + node**: both are managed by chezmoi (`.chezmoiexternal.toml` checks
-  out the pinned nvm release, `.chezmoiscripts/run_onchange_after_install-node.sh`
+  out the pinned nvm release, `.chezmoiscripts/run_onchange_after_install-node.py`
   installs the pinned node and enables Corepack), so nothing to do by hand.
   The TypeScript tooling nvim's `ts_ls` LSP expects is not managed:
 

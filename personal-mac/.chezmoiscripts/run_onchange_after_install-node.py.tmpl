@@ -1,0 +1,85 @@
+#!/usr/bin/python3
+"""Install the pinned Node.js version via nvm and enable corepack, which provides yarn.
+
+Do not edit the version here. It is rendered from node.version in
+.chezmoidata.toml, and chezmoi re-runs this script whenever that rendering
+changes -- so bumping node.version installs the new version on the next apply.
+
+nvm itself is installed by .chezmoiexternal.toml; the `after_` attribute makes
+this run after the file phase, so ~/.nvm is guaranteed to exist.
+
+Converges only: an already-installed node version is left as is, and versions
+dropped from .chezmoidata.toml are NOT uninstalled. Remove them deliberately
+with `nvm uninstall <version>`.
+
+nvm is a shell function rather than an executable, so the two steps that need it
+run through `bash -c` with nvm.sh sourced. Sourcing it in a throwaway shell also
+sidesteps nvm.sh's internal reads of unset variables, which a `set -u` shell
+would otherwise trip over.
+
+Runs under /usr/bin/python3 (the Xcode Command Line Tools build, 3.9) rather
+than `/usr/bin/env python3`, so the script does not depend on PATH or on a
+Homebrew python that may be mid-upgrade. Keep the code 3.9-compatible.
+"""
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+VERSION = "{{ .node.version }}"
+
+NVM_DIR = Path.home() / ".nvm"
+
+
+def nvm(snippet):
+    """Run a bash snippet with nvm loaded, exiting on failure.
+
+    The snippet receives the pinned version as "$1".
+    """
+    completed = subprocess.run(
+        [
+            "bash",
+            "-c",
+            '. "$NVM_DIR/nvm.sh"\n' + snippet,
+            "install-node",
+            VERSION,
+        ],
+        env=dict(os.environ, NVM_DIR=str(NVM_DIR)),
+    )
+    if completed.returncode != 0:
+        print(
+            "node: {} failed (exit {})".format(snippet, completed.returncode),
+            file=sys.stderr,
+        )
+        sys.exit(completed.returncode)
+
+
+def main():
+    if not (NVM_DIR / "nvm.sh").is_file():
+        print(
+            "node: {} not found, expected .chezmoiexternal.toml to "
+            "have checked out nvm".format(NVM_DIR / "nvm.sh"),
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # A literal version pin maps straight to a directory under ~/.nvm, so an
+    # already-installed version can be recognised without asking nvm to resolve
+    # it against the network. A symbolic pin (lts/*, or a bare major) will not
+    # match, which just means nvm install runs and reports it as already
+    # installed itself.
+    installed = (NVM_DIR / "versions" / "node" / ("v" + VERSION)).is_dir()
+    if installed:
+        print("node: v{} already installed".format(VERSION))
+    else:
+        sys.stdout.flush()
+        nvm('nvm install "$1"')
+
+    # Corepack ships with node and shims yarn (and pnpm) into the active node
+    # version's bin directory, respecting each project's packageManager field.
+    sys.stdout.flush()
+    nvm('nvm alias default "$1" && nvm use "$1" && corepack enable')
+
+
+main()

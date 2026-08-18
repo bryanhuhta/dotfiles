@@ -14,6 +14,6 @@
 
 [node]
     # Node.js version installed and set as the nvm default by
-    # run_onchange_after_install-node.sh.
+    # run_onchange_after_install-node.py.
     # Bump this and run `chezmoi apply` to install the new version.
     version = "24.18.1"
