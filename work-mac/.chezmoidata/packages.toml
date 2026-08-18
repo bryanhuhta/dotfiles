@@ -1,5 +1,5 @@
 # Homebrew packages for work-mac, installed by
-# .chezmoiscripts/run_onchange_install-packages.sh.
+# .chezmoiscripts/run_onchange_install-packages.py.
 #
 # The list is rendered into that script, so editing this file changes the
 # script's content and chezmoi re-runs it on the next apply.
@@ -15,14 +15,14 @@ taps = [
 ]
 
 brews = [
-  # Base
+  # Utils
+  "coreutils",            # GNU core utils
   "chezmoi",              # Dotfile manager
-  "fzf",                  # Fuzzy finder (used by the nvim fzf plugin)
   "jq",                   # Parse JSON from the command line
   "neovim",               # Neovim, of course
-  "the_silver_searcher",  # ag (better version of grep)
   "tree",                 # Display directories as trees
-  "tree-sitter-cli",      # Compiles nvim-treesitter grammars
+  "the_silver_searcher",  # ag (better version of grep)
+  "zsh",                  # Shell
 
   # Operations tools
   "awscli",               # AWS cli
@@ -36,6 +36,8 @@ brews = [
   # Development tools
   "buf",                  # Protobuf build tool
   "gh",                   # GitHub cli
+  "git",                  # VCS
+  "git-lfs",              # LFS for Git
   "go",                   # go programming language
   "gradle",               # JVM build tool
   "jenv",                 # Java environment manager
@@ -44,6 +46,7 @@ brews = [
   "mage",                 # Go-based build tool
   "mise",                 # Polyglot runtime manager (for Grafana Assistant development)
   "openjdk@21",           # LTS JDK, registered with jenv for version switching
+  "pipx",                 # Python package manager
   "protobuf",             # Protocol buffers (protoc)
   "zig",                  # Zig programming language
 
@@ -53,8 +56,10 @@ brews = [
   "tuxedo",               # todo.txt TUI
 
   # Neovim dependencies
+  "fzf",                  # Fuzzy finder (used by the nvim fzf plugin)
   "gopls",                # Go language server
   "jdtls",                # Java language server
+  "tree-sitter-cli",      # Compiles nvim-treesitter grammars
   "xcbeautify",           # Formatter for xcodebuild output
   "xcode-build-server",   # Feeds Xcode build flags to sourcekit-lsp
   "zls",                  # Zig language server

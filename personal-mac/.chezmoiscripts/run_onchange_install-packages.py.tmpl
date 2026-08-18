@@ -1,0 +1,189 @@
+#!/usr/bin/python3
+"""Install the Homebrew packages declared in .chezmoidata/packages.toml.
+
+Do not edit the package list here. It is rendered from packages.toml, and
+chezmoi re-runs this script whenever that rendering changes.
+
+Converges only: missing packages are installed, already-installed packages are
+left at their current version, and a package removed from the list is NOT
+uninstalled. Upgrade deliberately with `brew upgrade`.
+
+`brew bundle install` installs *and upgrades* by default, so an edit to
+packages.toml would otherwise upgrade every outdated formula and cask on the
+machine -- restarting running programs and moving versions that were pinned by
+choice. --no-upgrade holds installed packages where they are. (`brew install`
+may still pull a dependency forward if a genuinely new package needs it.)
+
+Before installing, anything Homebrew has that packages.toml does not declare is
+listed and confirmed, so a package that only exists because it was installed by
+hand is visible rather than quietly diverging. The check is silent when there is
+nothing unmanaged. Declining exits non-zero, which leaves the script unrecorded
+so the next apply asks again.
+
+Formulae are compared using `brew list --installed-on-request`, which excludes
+packages present only as another package's dependency. That reflects how a
+package was installed, not what it is now: something originally pulled in as a
+dependency and later installed directly may not be marked as requested, so it
+would not show up here.
+
+Runs under /usr/bin/python3 (the Xcode Command Line Tools build, 3.9) rather
+than `/usr/bin/env python3`, so the script does not depend on PATH or on a
+Homebrew python that may be mid-upgrade. Keep the code 3.9-compatible.
+"""
+
+import json
+import os
+import subprocess
+import sys
+
+BREW = "/opt/homebrew/bin/brew"
+
+PACKAGES = json.loads(r"""
+{{ dict "taps" .packages.taps "brews" .packages.brews "casks" .packages.casks | toPrettyJson }}
+""")
+
+
+def brew(*args):
+    """Return brew's stdout as a list of lines, or None if the command failed."""
+    completed = subprocess.run(
+        [BREW, *args],
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        print(
+            "packages: {} failed (exit {})".format(
+                " ".join(("brew",) + args), completed.returncode
+            ),
+            file=sys.stderr,
+        )
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        return None
+    return completed.stdout.split()
+
+
+def formula_name(spec):
+    """Reduce a Brewfile formula spec to the name brew reports in `brew list`.
+
+    A tap-qualified entry such as agavra/tap/tuicr is installed and listed as
+    tuicr, so without this the same package looks both undeclared and missing.
+    """
+    return spec.split("/")[-1]
+
+
+def unmanaged():
+    """Return (formulae, casks) that are installed but not declared."""
+    declared_brews = {formula_name(spec) for spec in PACKAGES["brews"]}
+    declared_casks = set(PACKAGES["casks"])
+
+    installed_brews = brew("list", "--formula", "--installed-on-request")
+    installed_casks = brew("list", "--cask")
+    if installed_brews is None or installed_casks is None:
+        # Without a reliable inventory the comparison would invent unmanaged
+        # packages or hide real ones. Say so and leave the install to proceed.
+        print(
+            "packages: could not inventory installed packages, "
+            "skipping the unmanaged check",
+            file=sys.stderr,
+        )
+        return [], []
+
+    return (
+        sorted(set(installed_brews) - declared_brews),
+        sorted(set(installed_casks) - declared_casks),
+    )
+
+
+def confirm(prompt):
+    """Ask on the terminal, returning None when there is nobody to ask.
+
+    The prompt reads /dev/tty rather than stdin: chezmoi does not promise a
+    usable stdin for scripts, and the terminal is what a person is actually
+    sitting at. Opening it twice, once to read and once to write, is deliberate:
+    a single "r+" handle raises OSError("not seekable") on macOS, which would
+    make every prompt look like an absent terminal.
+
+    A closed terminal reads as EOF, which is not a yes.
+    """
+    try:
+        with open("/dev/tty", "w") as out, open("/dev/tty", "r") as tty_in:
+            out.write(prompt)
+            out.flush()
+            answer = tty_in.readline()
+    except OSError:
+        return None
+    return answer.strip().lower() in ("y", "yes")
+
+
+def report_unmanaged():
+    """List undeclared packages and confirm, or return silently if there are none."""
+    formulae, casks = unmanaged()
+    if not formulae and not casks:
+        return
+
+    total = len(formulae) + len(casks)
+    print(
+        "packages: {} installed package{} not declared in packages.toml:".format(
+            total, "" if total == 1 else "s"
+        )
+    )
+    for name in formulae:
+        print("  formula  {}".format(name))
+    for name in casks:
+        print("  cask     {}".format(name))
+    print(
+        "  Add them to .chezmoidata/packages.toml to manage them, "
+        "or `brew uninstall` to drop them."
+    )
+    # stdout is block-buffered when it is not a terminal, so without this the
+    # listing surfaces after brew bundle's output instead of before it.
+    sys.stdout.flush()
+
+    answer = confirm("  Continue with the package install? [y/N] ")
+    if answer is None:
+        print(
+            "packages: no terminal to confirm on, continuing",
+            file=sys.stderr,
+        )
+        return
+    if not answer:
+        # Exiting non-zero keeps chezmoi from recording this script as run, so
+        # the next apply asks again instead of skipping the install for good.
+        print("packages: aborted", file=sys.stderr)
+        sys.exit(1)
+
+
+def brewfile():
+    lines = ['tap "{}"'.format(tap) for tap in PACKAGES["taps"]]
+    lines += ['brew "{}"'.format(spec) for spec in PACKAGES["brews"]]
+    lines += ['cask "{}"'.format(cask) for cask in PACKAGES["casks"]]
+    return "\n".join(lines) + "\n"
+
+
+def main():
+    # Skips the metadata refresh only; --no-upgrade is what protects installed
+    # packages from being upgraded.
+    os.environ["HOMEBREW_NO_AUTO_UPDATE"] = "1"
+
+    if not os.path.exists(BREW):
+        print("packages: {} not found".format(BREW), file=sys.stderr)
+        sys.exit(1)
+
+    report_unmanaged()
+
+    sys.stdout.flush()
+    completed = subprocess.run(
+        [BREW, "bundle", "install", "--no-upgrade", "--file=-"],
+        input=brewfile(),
+        text=True,
+    )
+    if completed.returncode != 0:
+        print(
+            "packages: brew bundle failed (exit {})".format(completed.returncode),
+            file=sys.stderr,
+        )
+        sys.exit(completed.returncode)
+
+
+main()

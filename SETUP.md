@@ -108,6 +108,11 @@ The bundle run passes `--no-upgrade`, so it only installs what is missing and
 leaves already-installed packages at their current versions. Upgrading is a
 separate, deliberate `brew upgrade`.
 
+Before installing, the script lists any Homebrew package that `packages.toml`
+does not declare and asks you to confirm, so a hand-installed package stays
+visible instead of quietly diverging. It says nothing when there is nothing
+unmanaged. Declining stops the apply, and the next one asks again.
+
 Stay at the keyboard: the `dotnet-sdk` cask installs via a macOS pkg and
 asks for the admin password partway through (`sudo -v` primes it, but the
 first bundle run is long and the sudo timestamp can expire). If the run

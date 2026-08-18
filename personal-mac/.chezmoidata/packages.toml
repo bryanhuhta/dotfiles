@@ -1,5 +1,5 @@
 # Homebrew packages for personal-mac, installed by
-# .chezmoiscripts/run_onchange_install-packages.sh.
+# .chezmoiscripts/run_onchange_install-packages.py.
 #
 # The list is rendered into that script, so editing this file changes the
 # script's content and chezmoi re-runs it on the next apply.
