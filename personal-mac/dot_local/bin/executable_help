@@ -1,0 +1,42 @@
+#!/bin/bash
+## Summarize all custom scripts installed in ~/.local/bin.
+##
+## Lists each script's name alongside its short description (the first
+## '##' comment line in the script). Run a script with '-h' to see its
+## full help text.
+##
+## Usage: help [-h]
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+bin_dir="${HOME}/.local/bin"
+
+if [[ ! -d "$bin_dir" ]]; then
+  echo "Error: $bin_dir does not exist"
+  exit 1
+fi
+
+max_name=0
+while IFS= read -r -d '' script; do
+  name=$(basename "$script")
+  if (( ${#name} > max_name )); then
+    max_name=${#name}
+  fi
+done < <(find "$bin_dir" -maxdepth 1 -type f -perm -u+x -print0)
+
+printf "Custom scripts in %s:\n\n" "$bin_dir"
+
+while IFS= read -r -d '' script; do
+  name=$(basename "$script")
+  desc=$(grep -m1 '^##' "$script" 2>/dev/null | sed -E 's/^## ?//' || true)
+  if [[ -z "$desc" ]]; then
+    desc="(no description)"
+  fi
+  printf "  %-*s  %s\n" "$max_name" "$name" "$desc"
+done < <(find "$bin_dir" -maxdepth 1 -type f -perm -u+x -print0 | sort -z)

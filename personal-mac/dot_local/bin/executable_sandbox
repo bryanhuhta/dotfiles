@@ -1,0 +1,86 @@
+#!/bin/bash
+## Run Claude in a sandboxed read-only Docker container.
+##
+## Builds the Docker image from the Dockerfile in the chezmoi source
+## directory if it doesn't already exist.
+##
+## Authenticates by reading the Claude Code OAuth credentials from the
+## "Claude Code-credentials" item in the macOS Keychain and passing them
+## as CLAUDE_CREDENTIALS to the container, where the entrypoint writes
+## them to ~/.claude/.credentials.json. This authenticates Claude itself
+## (enterprise OAuth) as well as plugin MCP integrations (e.g. Slack).
+##
+## Reads the gcx service-account token from the "gcx-sandbox" item in the
+## macOS Keychain and passes it as GRAFANA_TOKEN, with GRAFANA_SERVER set
+## to the ops instance, so gcx is authenticated in the container.
+##
+## Usage: sandbox [-h] [-f] [-w] [args...]
+##   -h    Print this help message
+##   -f    Force rebuild the Docker image before running
+##   -w    Mount the working directory as writable (default: read-only)
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+image="claude-sandbox"
+dockerfile="$(dirname $(chezmoi source-path))/claude-sandbox/Dockerfile"
+force=false
+writable=false
+
+while [[ "${1:-}" == -* ]]; do
+  case "${1:-}" in
+    -f) force=true; shift ;;
+    -w) writable=true; shift ;;
+    *) break ;;
+  esac
+done
+
+if [[ ! -f "$dockerfile" ]]; then
+  echo "Error: Dockerfile not found at $dockerfile"
+  exit 1
+fi
+
+if $force; then
+  docker rmi -f "$image" &>/dev/null
+fi
+
+if ! docker image inspect "$image" &>/dev/null; then
+  docker build -t "$image" -f "$dockerfile" "$(dirname $(chezmoi source-path))"
+fi
+
+claude_creds=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null) || true
+if [[ -z "${claude_creds:-}" ]]; then
+  echo "Error: could not read 'Claude Code-credentials' from macOS Keychain"
+  echo "Run 'claude' and log in to authenticate first"
+  exit 1
+fi
+
+gh_token=$(gh auth token 2>/dev/null) || true
+
+mount_opts="ro"
+if $writable; then
+  mount_opts="rw"
+fi
+
+run_args=(
+  --rm -it
+  -e "CLAUDE_CREDENTIALS=${claude_creds}"
+  -e "GH_TOKEN=${gh_token}"
+  -v "$(pwd):/workspace:${mount_opts}"
+)
+
+gcx_token=$(security find-generic-password -s "gcx-sandbox" -w 2>/dev/null) || true
+if [[ -n "${gcx_token:-}" ]]; then
+  run_args+=(
+    -e "GRAFANA_TOKEN=${gcx_token}"
+    -e "GRAFANA_SERVER=https://ops.grafana-ops.net"
+  )
+elif command -v gcx >/dev/null; then
+  echo "Warning: 'gcx-sandbox' not found in Keychain; gcx will not be authenticated" >&2
+fi
+
+docker run "${run_args[@]}" "$image" "$@"

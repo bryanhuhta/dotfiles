@@ -1,0 +1,317 @@
+<title>Deduplicating Concurrent Query Requests</title>
+<link rel="stylesheet" href="../explain.css">
+
+<div class="doc">
+
+  <header class="doc-header">
+    <p class="kicker">Code Diff Walkthrough</p>
+    <h1>Deduplicating Concurrent Panel Query Requests</h1>
+    <p class="dek">This document compares two implementations of request coalescing for <code>pkg/services/query</code>. Each implementation is evaluated for correctness, memory behavior, and readability under load.</p>
+    <p class="byline">Generated from diff <code>a3f9c12</code><span class="sep">versus</span><code>feature/query-dedup</code> on <code>main</code><span class="sep">·</span>PR #4821<span class="sep">·</span>reviewed by Bryan Huhta</p>
+  </header>
+
+  <div class="stat-group">
+    <span class="stat-pill stat-pill-add">+184</span>
+    <span class="stat-pill stat-pill-remove">−67</span>
+    <span class="stat-pill">12 files changed</span>
+    <span class="stat-pill">2 approaches evaluated</span>
+  </div>
+
+  <nav class="toc">
+    <p class="toc-title">Contents</p>
+    <ol>
+      <li><a href="#background">Background</a></li>
+      <li><a href="#approach-a">Approach A: mutex-guarded map</a></li>
+      <li><a href="#approach-b">Approach B: singleflight.Group</a></li>
+      <li><a href="#comparison">Side-by-side comparison</a>
+        <ol>
+          <li><a href="#request-flow">Request flow</a></li>
+          <li><a href="#package-layout">Package layout</a></li>
+        </ol>
+      </li>
+      <li><a href="#benchmarks">Benchmark trace</a></li>
+      <li><a href="#recommendation">Recommendation</a></li>
+    </ol>
+  </nav>
+
+  <section id="background">
+    <h2>Background</h2>
+    <p>When a dashboard with several panels loads, six or eight panels often issue the <em>identical</em> datasource query within the same render tick. Each such request specifies the same time range, the same expression, and the same variables. Each request currently reaches the datasource independently. This behavior multiplies query load on Prometheus or Loki by a factor of <code>N</code> and provides no benefit.</p>
+    <p>PR #4821 introduces a coalescing layer in front of <code>DatasourceQueryService.Query</code>. This layer allows concurrent, identical requests to share a single upstream call. Two candidate implementations were built and load-tested before either was proposed as the mainline patch.</p>
+    <div class="admonition note">
+      <p>Both approaches use the same call site, <code>pkg/services/query/handler.go</code>. Both approaches are gated by the feature flag <code>queryRequestDedup</code>. Either approach can be swapped in without changes to call sites elsewhere in the codebase.</p>
+    </div>
+  </section>
+
+  <section id="approach-a">
+    <h2>Approach A: mutex-guarded map</h2>
+    <p>The first approach introduces a hand-rolled <code class="ref-blue">QueryCoalescer</code>. The coalescer keeps an in-flight map keyed by a hash of the query fingerprint, guarded by a single <code>sync.Mutex</code>. Late arrivals block on a per-key <code>sync.WaitGroup</code> and read the result once the leader request completes.</p>
+
+    <div class="code-block-title">pkg/services/query/dedup_mutexmap.go</div>
+    <div class="diff-split">
+      <div class="diff-pane diff-pane-head">
+        <p class="diff-pane-label">HEAD</p>
+        <pre class="code-block"><code><span class="line line-remove">func (h *QueryHandler) Query(ctx context.Context, req *QueryRequest) (*QueryResult, error) {</span>
+<span class="line line-remove">	return h.datasource.Query(ctx, req)</span>
+<span class="line line-remove">}</span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span></code></pre>
+      </div>
+      <div class="diff-pane diff-pane-new">
+        <p class="diff-pane-label">NEW</p>
+        <pre class="code-block"><code><span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-empty"></span>
+<span class="line line-add">type QueryCoalescer struct {</span>
+<span class="line line-add">	mu       sync.Mutex</span>
+<span class="line line-add">	inFlight map[string]*pendingQuery</span>
+<span class="line line-add">}</span>
+<span class="line line-add"></span>
+<span class="line line-add">type pendingQuery struct {</span>
+<span class="line line-add">	wg     sync.WaitGroup</span>
+<span class="line line-add">	result *QueryResult</span>
+<span class="line line-add">	err    error</span>
+<span class="line line-add">}</span>
+<span class="line line-add"></span>
+<span class="line line-add">func (c *QueryCoalescer) Query(ctx context.Context, req *QueryRequest, fn func() (*QueryResult, error)) (*QueryResult, error) {</span>
+<span class="line line-add">	key := req.Fingerprint()</span>
+<span class="line line-add"></span>
+<span class="line line-add">	c.mu.Lock()</span>
+<span class="line line-add">	if p, ok := c.inFlight[key]; ok {</span>
+<span class="line line-add">		c.mu.Unlock()</span>
+<span class="line line-add">		p.wg.Wait()</span>
+<span class="line line-add">		return p.result, p.err</span>
+<span class="line line-add">	}</span>
+<span class="line line-focus">	p := &pendingQuery{}</span>
+<span class="line line-add">	p.wg.Add(1)</span>
+<span class="line line-add">	c.inFlight[key] = p</span>
+<span class="line line-add">	c.mu.Unlock()</span>
+<span class="line line-add"></span>
+<span class="line line-add">	p.result, p.err = fn()</span>
+<span class="line line-add">	p.wg.Done()</span>
+<span class="line line-add">	return p.result, p.err</span>
+<span class="line line-add">}</span></code></pre>
+      </div>
+    </div>
+
+    <p>The flagged line never deletes <code>key</code> from <code class="ref-blue">c.inFlight</code> after the leader request finishes. Every distinct fingerprint ever queried remains resident for the lifetime of the process.</p>
+
+    <div class="admonition danger">
+      <p>A load test against a 40-panel dashboard ran for 6 hours. Over that period, <code class="ref-blue">QueryCoalescer.inFlight</code> grew to 118,000 entries and retained approximately 340MB of <code>*QueryResult</code> pointers. Completed entries are never evicted. This is a memory leak, not a benchmarking artifact. The leak reproduces with <code>go test -run TestCoalescer_Leak -race</code>.</p>
+    </div>
+
+    <blockquote>
+      <p>&quot;This implementation leaks an entry per unique fingerprint indefinitely. The fix requires either a TTL sweep or a delete-on-completion path. The delete-on-completion path introduces its own race condition if a third request arrives between <code>p.wg.Done()</code> and the delete. This package should not reinvent singleflight.&quot;</p>
+      <span class="cite">Priyanka Rao, review comment on PR #4821</span>
+    </blockquote>
+  </section>
+
+  <section id="approach-b">
+    <h2>Approach B: <code>singleflight.Group</code></h2>
+    <p>The second approach replaces the hand-rolled map with <code class="ref-amber">golang.org/x/sync/singleflight</code>. This approach also adds a small <code class="ref-teal">resultBroadcaster</code> wrapper. The wrapper exists so that callers needing only a read-only snapshot, such as the panel viewer, do not retain a reference to the original mutable result.</p>
+
+    <div class="code-block-title">pkg/services/query/dedup_singleflight.go</div>
+    <pre class="code-block"><code><span class="line">type QueryCoalescer struct {</span>
+<span class="line">	group      singleflight.Group</span>
+<span class="line">	broadcast  *resultBroadcaster</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">func (c *QueryCoalescer) Query(ctx context.Context, req *QueryRequest, fn func() (*QueryResult, error)) (*QueryResult, error) {</span>
+<span class="line">	key := req.Fingerprint()</span>
+<span class="line line-focus">	v, err, shared := c.group.Do(key, func() (interface{}, error) {</span>
+<span class="line">		res, err := fn()</span>
+<span class="line">		c.broadcast.publish(key, res)</span>
+<span class="line">		return res, err</span>
+<span class="line">	})</span>
+<span class="line">	metrics.CoalescedRequestsTotal.WithLabelValues(strconv.FormatBool(shared)).Inc()</span>
+<span class="line">	if err != nil {</span>
+<span class="line">		return nil, err</span>
+<span class="line">	}</span>
+<span class="line">	return v.(*QueryResult), nil</span>
+<span class="line">}</span></code></pre>
+
+    <p><code class="ref-amber">singleflight.Group</code> deletes its internal call entry the moment <code>fn</code> returns. As a result, there is no map to sweep and no TTL to tune. The <code class="ref-teal">resultBroadcaster</code> is new. It notifies subscribers of a completed coalesced query without handing them the same pointer the leader goroutine is still mutating during serialization.</p>
+
+    <div class="admonition important">
+      <p><code class="ref-amber">singleflight.Group.Do</code> shares one result object across every waiter. For this reason, <code class="ref-teal">resultBroadcaster.publish</code> must deep-copy the result before handing it to subscribers. The leader goroutine in <code>handler.go</code> holds a mutable reference until it finishes writing the HTTP response.</p>
+    </div>
+  </section>
+
+  <section id="comparison">
+    <h2>Side-by-side comparison</h2>
+
+    <div class="compare">
+      <div class="compare-col">
+        <h3 class="compare-col-title">Approach A: mutex map</h3>
+        <ul>
+          <li>This approach requires no new dependency. It adds approximately 40 lines of first-party code.</li>
+          <li>Testing confirmed a memory leak under sustained load. Entries are never evicted.</li>
+          <li>The wait path uses <code>sync.WaitGroup</code>. This mechanism cannot carry a <code>context.Context</code> cancellation into waiters.</li>
+          <li>The implementation is straightforward to step through in a debugger.</li>
+        </ul>
+      </div>
+      <div class="compare-col">
+        <h3 class="compare-col-title">Approach B: singleflight</h3>
+        <ul>
+          <li>This approach adds <code>golang.org/x/sync</code>. This package is already an indirect dependency elsewhere in the module.</li>
+          <li>The map is self-cleaning. No growth was observed over the same 6-hour soak test.</li>
+          <li>Waiters observe the caller's <code>ctx</code> cancellation because <code>fn</code> closes over it directly.</li>
+          <li>This approach requires the extra <code class="ref-teal">resultBroadcaster</code> copy step to avoid shared-mutation bugs.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="request-flow">
+    <h3>Request flow (approach B)</h3>
+    <p>Three panels issuing the same query within the coalescing window collapse into one upstream call:</p>
+
+    <div class="flow">
+      <span class="flow-step">3× Panel Query</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step ref-blue">QueryCoalescer</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step ref-amber">singleflight.Group</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Datasource.Query</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step ref-teal">resultBroadcaster</span>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch ref-blue"></span>QueryCoalescer</span>
+      <span class="legend-item"><span class="legend-swatch ref-amber"></span>singleflight.Group</span>
+      <span class="legend-item"><span class="legend-swatch ref-teal"></span>resultBroadcaster</span>
+    </div>
+  </section>
+
+  <section id="package-layout">
+    <h3>Package layout</h3>
+    <p>Approach B changes three files under <code>pkg/services/query</code> and adds one new test file:</p>
+
+    <ul class="tree">
+      <li><span class="tree-node">pkg/services/query</span>
+        <ul>
+          <li><span class="tree-node ref-blue">dedup_singleflight.go</span></li>
+          <li><span class="tree-node ref-teal">broadcaster.go</span></li>
+          <li><span class="tree-node">handler.go</span></li>
+          <li><span class="tree-node">handler_test.go</span>
+            <ul>
+              <li><span class="tree-node">TestCoalescer_ConcurrentIdentical</span></li>
+              <li><span class="tree-node">TestCoalescer_ContextCancellation</span></li>
+              <li><span class="tree-node">TestBroadcaster_NoSharedMutation</span></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+
+    <p>Relative share of the diff by file:</p>
+    <div class="bar">
+      <div class="bar-segment ref-blue" style="width: 38%">dedup_singleflight.go</div>
+      <div class="bar-segment ref-teal" style="width: 27%">broadcaster.go</div>
+      <div class="bar-segment" style="width: 20%">handler_test.go</div>
+      <div class="bar-segment" style="width: 15%">handler.go</div>
+    </div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch ref-blue"></span>dedup_singleflight.go</span>
+      <span class="legend-item"><span class="legend-swatch ref-teal"></span>broadcaster.go</span>
+      <span class="legend-item"><span class="legend-swatch"></span>handler_test.go / handler.go</span>
+    </div>
+  </section>
+
+  <section id="benchmarks">
+    <h2>Benchmark trace</h2>
+    <p>Both implementations were tested against a synthetic 40-panel dashboard. The test replayed 25 concurrent dashboard loads per second for 6 hours. The test targeted a local Prometheus instance with 1 second of artificial query latency.</p>
+
+    <table class="table-trace">
+      <thead>
+        <tr>
+          <th>t+</th>
+          <th>build</th>
+          <th>goroutines</th>
+          <th>inFlight entries</th>
+          <th>p99 (ms)</th>
+          <th>RSS (MB)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>0m</td><td>approach-a</td><td>212</td><td>0</td><td>1043</td><td>118</td></tr>
+        <tr><td>30m</td><td>approach-a</td><td>340</td><td>9,812</td><td>1051</td><td>167</td></tr>
+        <tr><td>120m</td><td>approach-a</td><td>318</td><td>41,006</td><td>1058</td><td>241</td></tr>
+        <tr><td>360m</td><td>approach-a</td><td>329</td><td>118,204</td><td>1072</td><td>339</td></tr>
+        <tr><td>0m</td><td>approach-b</td><td>205</td><td>0</td><td>1041</td><td>115</td></tr>
+        <tr><td>30m</td><td>approach-b</td><td>221</td><td>3</td><td>1039</td><td>119</td></tr>
+        <tr><td>120m</td><td>approach-b</td><td>219</td><td>4</td><td>1044</td><td>121</td></tr>
+        <tr><td>360m</td><td>approach-b</td><td>224</td><td>2</td><td>1040</td><td>123</td></tr>
+      </tbody>
+    </table>
+
+    <p>Summary of the two runs:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Approach A</th>
+          <th>Approach B</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Upstream queries issued (vs. naive baseline)</td><td>−81%</td><td>−84%</td></tr>
+        <tr><td>p99 latency, coalesced request</td><td>1072ms</td><td>1040ms</td></tr>
+        <tr><td>RSS growth over 6h soak</td><td>+221MB</td><td>+8MB</td></tr>
+        <tr><td>New dependency</td><td>none</td><td><code>golang.org/x/sync</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="admonition warning">
+      <p>For approach A, the <code>inFlight entries</code> column is the leading indicator, not RSS. RSS growth lags entry growth because Go's allocator does not immediately return freed pages to the operating system. A shorter soak test would have made this leak easy to miss.</p>
+    </div>
+  </section>
+
+  <section id="recommendation">
+    <h2>Recommendation</h2>
+    <p>Approach B should be shipped. The <code class="ref-amber">singleflight.Group</code> primitive already solves the eviction problem that affected approach A. The primitive is a well-exercised dependency: it backs coalescing in <code>groupcache</code> and in several parts of the Go toolchain. The added <code class="ref-teal">resultBroadcaster</code> copy step is a small, isolated cost. This cost is necessary for correctness under concurrent mutation.</p>
+
+    <div class="admonition tip">
+      <p>If a future profile shows that the deep-copy in <code class="ref-teal">resultBroadcaster.publish</code> is hot, then <code>QueryResult</code> should be made immutable after construction instead of removing the copy. This change closes the mutation hazard at the source instead of reintroducing it under load.</p>
+    </div>
+  </section>
+
+  <footer class="doc-footer">
+    <p>Sources</p>
+    <ul class="source-list">
+      <li>PR #4821: <code>feature/query-dedup</code> → <code>main</code>, commit <code>a3f9c12</code></li>
+      <li>Benchmark harness: <code>pkg/services/query/testdata/dashboard_soak_test.go</code></li>
+      <li>Review thread: Priyanka Rao, Bryan Huhta (2026-08-13)</li>
+    </ul>
+  </footer>
+
+</div>

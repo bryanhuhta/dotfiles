@@ -28,15 +28,5 @@
 #
 # More examples can be found here:
 #  https://www.1password.dev/ssh/agent/config
-{{- if eq .profile "personal" }}
 [[ssh-keys]]
 vault = "Private"
-{{- end }}
-
-{{- if eq .profile "work" }}
-[[ssh-keys]]
-vault = "Employee"
-
-[[ssh-keys]]
-vault = "Grafana"
-{{- end }}

@@ -97,46 +97,65 @@ chezmoi data
 
 ## Profiles
 
-Dotfiles are written to support multiple profiles (e.g. `work`, `personal`). Profile is set in the machine-local config and controls which sections of templates are rendered.
+There are four profiles: `personal-mac`, `work-mac`, `personal-bazzite`, and `personal-fedora`. Profile is set in the machine-local config, alongside a `sourceDir` that selects which source directory that machine applies from.
+
+### Per-profile source directories (the Mac profiles)
+
+`personal-mac/` and `work-mac/` are self-contained chezmoi source directories at the top of the repository. The machine-local `chezmoi.toml` points `sourceDir` at one of them, so chezmoi never sees the other profiles' files at all.
+
+Inside a profile directory:
+
+- There are **no `.profile` conditionals**. The directory is the condition. A file that needs to differ per profile simply differs between the two directories, and a file only one profile wants exists only in that directory.
+- It owns its own `.chezmoiignore`, `.chezmoidata.toml`, `.chezmoidata/`, `.chezmoiexternal.toml`, and `.chezmoiscripts/`. The root copies of those files do not apply.
+- Templating is reserved for machine data (`.git.name`, `.git.email`, `hasKey .git "signingkey"`). If a file has no template actions left after de-templating, drop its `.tmpl` suffix.
+- Repository-root assets (`claude-home/`, `zed_settings.json`, the Docker build contexts) live one level up. Reach them with `{{ .chezmoi.sourceDir | dir }}` in a template and `$(dirname $(chezmoi source-path))` in a script — a bare `.chezmoi.sourceDir` resolves inside the profile directory and silently produces a dangling symlink or a missing build context.
+- Scripts belong in `.chezmoiscripts/`, not at the top level, so they run without also being written into `$HOME`.
+
+When changing something that both Macs share, make the edit in both directories. There is deliberately no shared layer between them.
+
+### The repository root (the Linux profiles)
+
+`personal-bazzite` and `personal-fedora` still apply from the repository root and set no `sourceDir`, so the root tree keeps using the `{{ if eq .profile ... }}` gating described below. Root `.chezmoiignore` fails with an explanatory error for any other profile value, so a Mac machine with a stale or missing `sourceDir` stops instead of rendering a half-empty tree.
 
 Use separate `if` blocks rather than `if/else` so each profile's section is independently readable:
 
 ```
-{{- if eq .profile "personal" }}
-# personal-only config
+{{- if eq .profile "personal-fedora" }}
+# personal-fedora-only config
 {{- end }}
 
-{{- if eq .profile "work" }}
-# work-only config
-{{- end }}
-```
-
-**Never use `eq .profile ""` (or any other check that treats an unset/empty profile as a valid case).** An empty profile means `chezmoi.toml` is missing or misconfigured on this machine — that is an error, not a fourth profile, and setup must fail immediately rather than quietly rendering as if it were `personal` or any other profile. `.chezmoiignore` enforces this globally:
-
-```
-{{- if not .profile }}
-{{ fail "profile is not set in chezmoi.toml — set `profile` to personal, work, personal-bazzite, or personal-fedora before running apply" }}
+{{- if eq .profile "personal-bazzite" }}
+# personal-bazzite-only config
 {{- end }}
 ```
 
-Because `.chezmoiignore` is read on every chezmoi command, this guard means no other template needs to (and none should) special-case an empty profile — by the time any other template renders, `.profile` is guaranteed non-empty. If you see `eq .profile ""` anywhere, it's leftover from before this guard existed and should be deleted, not treated as a legitimate branch.
+**Never treat an unset, empty, or unrecognised profile as a valid case.** It means `chezmoi.toml` is missing or misconfigured on this machine — an error, not another profile — and setup must fail immediately rather than quietly rendering as if it were some other profile. Root `.chezmoiignore` enforces this with a whitelist, not an emptiness check (`not .profile` is false for any non-empty string, so a typo or a stale value would sail straight through):
+
+```
+{{- $profile := dig "profile" "" . -}}
+{{- if not (has $profile (list "personal-bazzite" "personal-fedora")) }}
+{{ fail (printf "profile %q cannot be applied from this source directory — ..." $profile) }}
+{{- end }}
+```
+
+Because `.chezmoiignore` is read on every chezmoi command, this guard means no other template in the root tree needs to (and none should) special-case a bad profile — by the time any other template renders, `.profile` is guaranteed to be one of the two Linux profiles. If you see `eq .profile ""` anywhere, it's leftover from before this guard existed and should be deleted, not treated as a legitimate branch.
 
 **Never use a bare `else` (or catch-all `else if`) to fall back to a "default" case.** Write one explicit `if` per profile that should get a given piece of config. A profile that matches none of them should render nothing for that block — not silently inherit some other profile's behavior. Implicit defaults are exactly how machine-specific values (a macOS-only path, a brew-only command) leak onto profiles that were never meant to have them:
 
 ```
-# Bad — new profiles silently inherit the mac path with no warning:
-{{- if or (eq .profile "personal") (eq .profile "work") }}
-  IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
-{{- else }}
-  IdentityAgent "~/.1password/agent.sock"
+# Bad — a new profile silently inherits the bazzite package manager with no warning:
+{{ if eq .profile "personal-fedora" -}}
+sudo dnf install -y $packages
+{{- else -}}
+brew bundle install --global
 {{- end }}
 
-# Good — every profile that gets this line is named explicitly; anything else gets none:
-{{- if or (eq .profile "personal") (eq .profile "work") }}
-  IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+# Good — every profile that gets a branch is named explicitly; anything else gets none:
+{{ if eq .profile "personal-fedora" -}}
+sudo dnf install -y $packages
 {{- end }}
-{{- if or (eq .profile "personal-fedora") (eq .profile "personal-bazzite") }}
-  IdentityAgent "~/.1password/agent.sock"
+{{ if eq .profile "personal-bazzite" -}}
+brew bundle install --global
 {{- end }}
 ```
 
@@ -160,18 +179,12 @@ brew install zsh
 ```
 ```
 # .chezmoiignore
-{{- if eq .profile "personal" }}
-install-zsh.sh
-{{- end }}
-{{- if eq .profile "work" }}
-install-zsh.sh
-{{- end }}
 {{- if eq .profile "personal-fedora" }}
 install-zsh.sh
 {{- end }}
 ```
 
-**Exception: if the file's template body calls something side-effecting or environment-dependent** (`onepasswordRead`, `output`, `exec`, or similar — anything that shells out or depends on machine state), keep an in-template `{{ if }}` guard around that specific call. `.chezmoiignore` filters the target only *after* the whole template has already been rendered — it cannot stop the call itself from being evaluated on a profile where it would fail (e.g. an `op://` reference to a vault item that doesn't exist there, or `op` not being installed at all). Verified empirically: a `.chezmoiignore`-excluded template's `{{ fail }}` call still fired when rendered directly. `hasKey`/`eq`/plain data lookups have no such risk and should still move to `.chezmoiignore`, same as any other whole-file gate — only calls with actual side effects need the in-template guard. When you do keep one, also add the file to `.chezmoiignore` for the other profiles anyway, as a defense-in-depth backstop and to document the intent (see `private_dot_ssh/wrightauto.pub.tmpl` for a worked example, including the comment explaining why).
+**Exception: `.chezmoiexternal.toml` and `.chezmoidata*` are not covered by `.chezmoiignore`.** For ordinary files and scripts, chezmoi checks the ignore list *before* evaluating a template's contents, so an ignored template never runs. Those two are different: they are executed during the source-directory walk, before `.chezmoiignore` is read. If one of them calls something side-effecting or environment-dependent (`onepasswordRead`, `output`, `exec` — anything that shells out or depends on machine state), it needs an in-template `{{ if }}` guard around that call, because no ignore entry can stop it from running. Note that `chezmoi cat` and `chezmoi execute-template` bypass ignores entirely, so neither is evidence about what `apply` would do.
 
 **When to split vs combine:** Use a single file with `if` blocks when profile differences are small. Use separate files per profile when differences are large enough that a single file becomes hard to follow.
 
@@ -197,9 +210,9 @@ Common patterns:
 # Interpolate a value
 email = {{ .git.email }}
 
-# Conditional block
-{{- if eq .profile "work" }}
-export WORK_ONLY=1
+# Conditional block (root tree only — profile directories have no conditionals)
+{{- if eq .profile "personal-fedora" }}
+export FEDORA_ONLY=1
 {{- end }}
 ```
 

@@ -1,6 +1,19 @@
-{{- if not .profile }}
-{{ fail "profile is not set in chezmoi.toml — set `profile` to personal, work, personal-bazzite, or personal-fedora before running apply" }}
+{{- /*
+This tree is the source root for the Linux profiles only. personal-mac and
+work-mac have their own self-contained source directories at the top of the
+repository, selected with `sourceDir` in the machine-local chezmoi.toml.
+*/ -}}
+{{- $profile := dig "profile" "" . -}}
+{{- if not (has $profile (list "personal-bazzite" "personal-fedora")) }}
+{{ fail (printf "profile %q cannot be applied from this source directory — set `profile` in chezmoi.toml to personal-bazzite or personal-fedora, or point `sourceDir` at the personal-mac / work-mac directory for a Mac" $profile) }}
 {{- end }}
+
+# Profile source directories with their own sourceDir; never targets of this one.
+personal-mac/
+work-mac/
+
+# Repository audit notes
+BUGS.md
 
 CLAUDE.md
 README.md
@@ -29,47 +42,8 @@ zed_settings.json
 .ssh/allowed_signers
 {{- end }}
 
-{{- if eq .profile "personal" }}
-# Not loaded on the personal profile
-.local/bin/p
-.local/bin/sso
-.local/bin/mermaid
-.local/bin/ts2date
-.local/bin/gifify
-.local/bin/slackify
-.local/bin/jpegify
-.local/bin/scan
-.local/bin/docker-clean
-install-zsh.sh
-install-nvm.sh
-
-# GNOME-on-Fedora-only key remap
-swap-caps-escape.sh
-
-# Ghostty on personal uses the macOS Library path, not this one
-.config/ghostty
-{{- end }}
-
-{{- if eq .profile "work" }}
-# Not loaded on the work profile
-.local/bin/pico8
-install-zsh.sh
-
-# Wright Auto Server key is in the Private vault, personal profile only.
-# The template also guards the onepasswordRead call itself — see its
-# comment for why that guard can't be replaced by this ignore alone.
-.ssh/wrightauto.pub
-
-# GNOME-on-Fedora-only key remap
-swap-caps-escape.sh
-
-# personal-fedora only
-.config/ghostty
-{{- end }}
-
 {{- if eq .profile "personal-bazzite" }}
 # Not loaded on the personal-bazzite profile
-.local/bin/pico8
 .local/bin/movtomp4
 .local/bin/p
 .local/bin/sso
@@ -80,42 +54,18 @@ swap-caps-escape.sh
 .local/bin/jpegify
 .local/bin/scan
 .local/bin/docker-clean
-install-nvm.sh
-install-node.sh
 
 # Ghostty isn't installed on personal-bazzite (see dot_Brewfile.tmpl)
 .config/ghostty
-Library/Application Support/com.mitchellh.ghostty/**
-
-# MarkEdit is only installed on the personal and work profiles (see
-# dot_Brewfile.tmpl); this also skips the markedit-preview external in
-# .chezmoiexternal.toml
-Library/Containers/app.cyan.markedit/**
-
-# Wright Auto Server key is in the Private vault, personal profile only.
-# The template also guards the onepasswordRead call itself — see its
-# comment for why that guard can't be replaced by this ignore alone.
-.ssh/wrightauto.pub
 
 # GNOME-on-Fedora-only key remap
 swap-caps-escape.sh
 {{- end }}
 
 {{- if eq .profile "personal-fedora" }}
-# Library/** holds only macOS app data (Ghostty's Application Support config,
-# MarkEdit's Containers sandbox); none of it applies on Linux.
-Library/**
-
 # Not loaded on the personal-fedora profile
 .Brewfile
 .local/bin/**
 .config/zed
 install-zsh.sh
-install-nvm.sh
-install-node.sh
-
-# Wright Auto Server key is in the Private vault, personal profile only.
-# The template also guards the onepasswordRead call itself — see its
-# comment for why that guard can't be replaced by this ignore alone.
-.ssh/wrightauto.pub
 {{- end }}
