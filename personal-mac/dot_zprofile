@@ -1,0 +1,31 @@
+# Login-shell setup: PATH and one-time / slow tool initialization.
+#
+# Runs after /etc/zprofile (which runs path_helper), so PATH modifications
+# here take precedence over /etc/paths and /etc/paths.d entries.
+#
+# Exports here are inherited by all child shells, so .zshrc aliases that
+# reference these variables resolve correctly even in non-login subshells.
+
+# Homebrew (sets PATH, MANPATH, INFOPATH, HOMEBREW_PREFIX, ...).
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Utility scripts
+export PATH="$HOME/.local/bin:$PATH"
+
+# Go
+export GOPATH="$HOME/go"
+export PATH="$PATH:$HOME/go/bin"
+
+# Dotnet
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+# Rust / cargo
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+# node, nvm
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+# OrbStack
+source ~/.orbstack/shell/init.zsh 2>/dev/null || :

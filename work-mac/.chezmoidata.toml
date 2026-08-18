@@ -1,0 +1,19 @@
+# Repo-wide template data (tracked, unlike the machine-local chezmoi.toml).
+
+[markeditPreview]
+    # Release tag (without the "v" prefix) from
+    # https://github.com/MarkEdit-app/MarkEdit-preview/tags.
+    # Bump this and run `chezmoi apply` to upgrade the extension.
+    version = "1.8.1"
+
+[nvm]
+    # Release tag (without the "v" prefix) from
+    # https://github.com/nvm-sh/nvm/releases.
+    # Bump this and run `chezmoi apply` to upgrade nvm.
+    version = "0.40.6"
+
+[node]
+    # Node.js version installed and set as the nvm default by
+    # run_onchange_after_install-node.sh.
+    # Bump this and run `chezmoi apply` to install the new version.
+    version = "24.18.1"

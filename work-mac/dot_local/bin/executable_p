@@ -1,0 +1,94 @@
+#!/bin/bash
+## Run profilecli against a named environment.
+##
+## Maps an environment name to a 1Password item in the Grafana vault and
+## exports credentials from it for the profilecli invocation:
+##
+##   username field  ->  PROFILECLI_USERNAME
+##   website field   ->  PROFILECLI_URL
+##   read field      ->  PROFILECLI_PASSWORD
+##   tenant field    ->  PROFILECLI_TENANT_ID  (optional)
+##
+## The special environment "local" fetches no secrets from 1Password; it
+## runs profilecli as-is, picking up whatever PROFILECLI_* vars (if any)
+## are already in your environment.
+##
+## Everything after the environment name is passed through to profilecli.
+##
+## Usage: p [-h] <environment> [profilecli args...]
+##   -h    Print this help message, including available environments
+##
+## Examples:
+##   p ops-002 query series
+##   p local query series
+
+set -euo pipefail
+
+# Environment name -> 1Password item name (Grafana vault).
+# To add an environment, add a line below.
+# (source: chezmoi edit ~/.local/bin/p)
+environments=$(cat <<'EOF'
+dev-001     grafanacloud-dev-profiles
+ops-002     grafanacloud-ops-profiles
+bloom       grafanacloud-bloom-profiles
+bryanhuhta  grafanacloud-bryanhuhta-profiles
+EOF
+)
+
+list_environments() {
+  echo "  local (no 1Password lookup)"
+  awk '{ print "  " $1 }' <<<"$environments"
+}
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  echo
+  echo "Available environments:"
+  list_environments
+  exit 0
+fi
+
+if [[ $# -lt 1 ]]; then
+  echo "Error: missing environment name" >&2
+  echo "Usage: p [-h] <environment> [profilecli args...]" >&2
+  exit 1
+fi
+
+name="$1"
+shift
+
+if [[ "$name" == "local" ]]; then
+  exec profilecli "$@"
+fi
+
+item="$(awk -v n="$name" '$1 == n { print $2 }' <<<"$environments")"
+
+if [[ -z "$item" ]]; then
+  echo "Error: unknown environment '$name'. Known environments:" >&2
+  list_environments >&2
+  exit 1
+fi
+
+item_json="$(op item get --vault Grafana "$item" --format json)"
+
+field() {
+  jq -r --arg label "$1" \
+    '[.fields[]? | select(.label == $label or .id == $label) | .value // empty][0] // empty' \
+    <<<"$item_json"
+}
+
+url="$(jq -r '.urls[0].href // empty' <<<"$item_json")"
+if [[ -z "$url" ]]; then
+  url="$(field website)"
+fi
+
+username="$(field username)"
+password="$(field read)"
+tenant="$(field tenant)"
+
+if [[ -n "$url" ]]; then export PROFILECLI_URL="$url"; fi
+if [[ -n "$username" ]]; then export PROFILECLI_USERNAME="$username"; fi
+if [[ -n "$password" ]]; then export PROFILECLI_PASSWORD="$password"; fi
+if [[ -n "$tenant" ]]; then export PROFILECLI_TENANT_ID="$tenant"; fi
+
+exec profilecli "$@"

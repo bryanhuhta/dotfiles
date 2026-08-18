@@ -1,0 +1,57 @@
+#!/bin/bash
+## Resize images to fit Slack's upload size limits using ImageMagick
+## (via the `utility` Docker container).
+##
+## Accepts a single file or a directory of images. Output files are
+## written with a "-slackified" suffix. An optional output directory
+## can be specified. All paths must be inside the current directory.
+##
+## Usage: slackify [-h] <file|directory> [output_dir]
+##   -h            Print this help message
+##   file          A single image file to resize
+##   directory     A directory of images to resize
+##   output_dir    Optional directory to write output files to
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+infile="${1:-}"
+if [[ -z "$infile" ]]; then
+  echo "Usage: slackify <file|directory> [output_dir]"
+  exit 1
+fi
+
+files=()
+if [[ -d "$infile" ]]; then
+  for f in "$infile"/*; do
+    files+=("$f")
+  done
+else
+  files+=("$infile")
+fi
+
+outdir="${2:-}"
+if [[ -n "$outdir" ]]; then
+  if [[ -f "$outdir" ]]; then
+    echo "Error: output directory is a file that already exists: $outdir"
+    exit 1
+  fi
+  if [[ ! -d "$outdir" ]]; then
+    mkdir "$outdir"
+  fi
+fi
+
+for f in "${files[@]}"; do
+  echo "slackifying $f"
+  name="${f%.*}"
+  ext="${f##*.}"
+  outfile="${name}-slackified.${ext}"
+  if [[ -n "$outdir" ]]; then
+    outfile="${outdir}/$(basename "$outfile")"
+  fi
+  utility magick "$f" -resize 44000000@ "$outfile"
+done

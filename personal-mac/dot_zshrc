@@ -1,0 +1,20 @@
+# Interactive-shell setup: prompt, plugins, aliases, keybindings.
+# Env vars and PATH live in .zshenv and .zprofile.
+
+# Path to your oh-my-zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
+
+ZSH_THEME="custom-eastwood"
+DISABLE_UPDATE_PROMPT="true"
+plugins=(git virtualenv)
+
+[ -f "$ZSH/oh-my-zsh.sh" ] && source "$ZSH/oh-my-zsh.sh"
+
+# Make ag output easier to read
+alias ag="ag --nogroup"
+
+# Make chezmoi faster to access
+alias z="chezmoi"
+
+# Make EDITOR faster to access
+alias e="$EDITOR"

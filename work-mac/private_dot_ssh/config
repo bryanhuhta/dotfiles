@@ -1,0 +1,6 @@
+# OrbStack requires this Include to be at the top of ssh_config, before any
+# Host blocks. It is silently ignored on machines without OrbStack.
+Include ~/.orbstack/ssh/config
+
+Host *
+  IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"

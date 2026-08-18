@@ -1,0 +1,35 @@
+#!/bin/bash
+## Convert Unix timestamps to human-readable dates.
+##
+## Outputs UTC by default. Use -l for local time.
+## Accepts multiple timestamps.
+##
+## Usage: ts2date [-h] [-l] <timestamp...>
+##   -h    Print this help message
+##   -l    Display in local time instead of UTC
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+localtime=false
+if [[ "${1:-}" == "-l" ]]; then
+  localtime=true
+  shift
+fi
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: ts2date [-l] <timestamp...>"
+  exit 1
+fi
+
+for ts in "$@"; do
+  if $localtime; then
+    node -e "console.log(new Date(${ts}).toString())"
+  else
+    node -e "console.log(new Date(${ts}).toUTCString())"
+  fi
+done

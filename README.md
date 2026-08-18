@@ -5,14 +5,40 @@ This repository contains dotfiles managed using
 
 Setting up a new machine? Follow the runbook in [SETUP.md](SETUP.md).
 
+## Layout
+
+The Mac profiles each have their own self-contained chezmoi source directory at
+the top of this repository; the Linux profiles still share the repository root.
+
+| Profile            | Source directory        |
+|--------------------|-------------------------|
+| `personal-mac`     | `personal-mac/`         |
+| `work-mac`         | `work-mac/`             |
+| `personal-bazzite` | repository root         |
+| `personal-fedora`  | repository root         |
+
+A profile directory holds its own `.chezmoiignore`, `.chezmoidata/`,
+`.chezmoiexternal.toml`, and `.chezmoiscripts/`, and contains no profile
+conditionals — the directory *is* the condition. Files shared by every profile
+(`claude-home/`, `zed_settings.json`, the Docker build contexts) stay at the
+repository root and are reached from a profile directory with
+`{{ .chezmoi.sourceDir | dir }}` in templates, or
+`$(dirname $(chezmoi source-path))` in scripts.
+
+The repository root refuses to apply for a Mac profile: `.chezmoiignore` fails
+with an explanatory error for any profile other than `personal-bazzite` and
+`personal-fedora`.
+
 ## Config
 
-Create `~/.config/chezmoi/chezmoi.toml` with a `[data]` section to configure
-machine-specific values:
+Create `~/.config/chezmoi/chezmoi.toml` to configure machine-specific values.
+On a Mac, `sourceDir` selects the profile directory:
 
 ```toml
+sourceDir = "~/.local/share/chezmoi/work-mac"
+
 [data]
-    profile = "work"
+    profile = "work-mac"
 
 [data.git]
     name = "Your Name"
@@ -21,7 +47,8 @@ machine-specific values:
 
 | Key               | Required | Default      | Description                                                    |
 |-------------------|----------|--------------|----------------------------------------------------------------|
-| `profile`         | yes      | -            | dotfile profile: `personal`, `work`, or `personal-bazzite`; templates fail to render if unset |
+| `sourceDir`       | Macs only| repo root    | profile source directory; must match `profile`                 |
+| `profile`         | yes      | -            | dotfile profile: `personal-mac`, `work-mac`, `personal-bazzite`, or `personal-fedora` |
 | `git.name`        | yes      | -            | git username                                                   |
 | `git.email`       | yes      | -            | git email                                                      |
 | `git.signingkey`  | no       | -            | SSH public key string for commit signing; enables signing when set |
@@ -29,14 +56,15 @@ machine-specific values:
 ## MarkEdit preview extension
 
 The [MarkEdit-preview](https://github.com/MarkEdit-app/MarkEdit-preview)
-extension is managed by chezmoi on the `work` profile (MarkEdit itself is
-installed by the Brewfile there):
+extension is managed by chezmoi on the `personal-mac` and `work-mac` profiles
+(MarkEdit itself is installed by the package list there):
 
-- **Version** is pinned in `.chezmoidata.toml` (`markeditPreview.version`).
+- **Version** is pinned in the profile's `.chezmoidata.toml`
+  (`markeditPreview.version`).
   To upgrade, pick a tag from the
   [releases](https://github.com/MarkEdit-app/MarkEdit-preview/tags), bump the
-  value, and run `chezmoi apply` — `.chezmoiexternal.toml` embeds the version
-  in the download URL, so changing it re-downloads the script.
+  value, and run `chezmoi apply` — the profile's `.chezmoiexternal.toml` embeds
+  the version in the download URL, so changing it re-downloads the script.
 - **Settings** live under the `extension.markeditPreview` node in MarkEdit's
   managed `settings.json`
   (`~/Library/Containers/app.cyan.markedit/Data/Documents/settings.json`).
@@ -47,18 +75,19 @@ Restart MarkEdit after applying for changes to take effect.
 
 ## Node.js (nvm + yarn)
 
-Node tooling is managed by chezmoi on the `personal` and `work` profiles
-(it lives outside the Brewfile because nvm is unsupported under Homebrew
-and brew's `yarn` would drag in brew's own `node`):
+Node tooling is managed by chezmoi on the `personal-mac` and `work-mac`
+profiles (it lives outside the package list because nvm is unsupported under
+Homebrew and brew's `yarn` would drag in brew's own `node`):
 
 - **nvm** is installed as an archive checkout of the pinned release
-  (`nvm.version` in `.chezmoidata.toml`) via `.chezmoiexternal.toml` — not
+  (`nvm.version` in the profile's `.chezmoidata.toml`) via its
+  `.chezmoiexternal.toml` — not
   with nvm's `install.sh`, which would edit the chezmoi-managed shell
   profile. To upgrade, pick a tag from the
   [releases](https://github.com/nvm-sh/nvm/releases), bump the value, and
   run `chezmoi apply`.
-- **node** is installed by `run_onchange_after_install-node.sh`, pinned as
-  `node.version` in `.chezmoidata.toml`. Bump the value and run
+- **node** is installed by `.chezmoiscripts/run_onchange_after_install-node.sh`,
+  pinned as `node.version` in the profile's `.chezmoidata.toml`. Bump the value and run
   `chezmoi apply` to install the new version and make it the nvm default
   (old versions are kept; remove them with `nvm uninstall <version>`).
 - **yarn** comes from Corepack (bundled with node), enabled by the same

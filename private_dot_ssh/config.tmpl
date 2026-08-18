@@ -3,19 +3,4 @@
 Include ~/.orbstack/ssh/config
 
 Host *
-{{- if or (eq .profile "personal") (eq .profile "work") }}
-  IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
-{{- end }}
-{{- if or (eq .profile "personal-fedora") (eq .profile "personal-bazzite") }}
   IdentityAgent "~/.1password/agent.sock"
-{{- end }}
-
-{{- if eq .profile "personal" }}
-
-Host wrightauto 75.134.133.125
-  HostName 75.134.133.125
-  User kyle
-  Port 22
-  IdentityFile ~/.ssh/wrightauto.pub
-  IdentitiesOnly yes
-{{- end }}

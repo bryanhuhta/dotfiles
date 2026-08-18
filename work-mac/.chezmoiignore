@@ -1,0 +1,5 @@
+{{- if not (hasKey .git "signingkey") }}
+# No signing key configured on this machine
+.ssh/allowed_signers
+{{- end }}
+

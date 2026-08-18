@@ -1,0 +1,34 @@
+{
+  "editor.autoCharacterPairs" : true,
+  "editor.autoSaveWhenIdle" : false,
+  "editor.customToolbarItems" : [
+
+  ],
+  "editor.indentBehavior" : "never",
+  "editor.nativeSearchQuerySync" : false,
+  "extension.markeditPreview" : {
+    "hidePreviewButtons" : true,
+    "imageHoverPreview" : false,
+    "markdownIt" : {
+      "options" : {
+
+      },
+      "preset" : "default"
+    },
+    "styledHtmlColorScheme" : "auto",
+    "syncScroll" : true,
+    "syntaxAutoDetect" : false,
+    "themeName" : "github",
+    "updateBehavior" : "never"
+  },
+  "general.disableCorsRestrictions" : true,
+  "general.mainWindowHotKey" : {
+    "key" : "M",
+    "modifiers" : [
+      "Shift",
+      "Command",
+      "Option"
+    ]
+  },
+  "general.updateBehavior" : "quiet"
+}
