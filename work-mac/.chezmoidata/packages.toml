@@ -42,6 +42,7 @@ brews = [
   "k6",                   # Load testing tool
   "libpq",                # Postgres client tools (psql)
   "mage",                 # Go-based build tool
+  "mise",                 # Polyglot runtime manager (for Grafana Assistant development)
   "openjdk@21",           # LTS JDK, registered with jenv for version switching
   "protobuf",             # Protocol buffers (protoc)
   "zig",                  # Zig programming language
