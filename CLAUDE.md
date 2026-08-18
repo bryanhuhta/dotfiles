@@ -275,7 +275,7 @@ Tools with no Homebrew formula or cask are installed from a vendored copy of the
 
 - The script lives in `<profile>/.installers/<tool>/`. Entries starting with `.` are invisible to chezmoi, so nothing there reaches `$HOME`.
 - `<profile>/.chezmoidata/installers.toml` declares each installer: `name`, `description`, `script` (relative to `.installers/`), `upstream`, `requires` (commands that must be on `PATH`), and optionally `preflight` (commands that must exit 0), `hint`, and `env`.
-- `<profile>/.chezmoiscripts/run_after_run-installers.py.tmpl` renders the list into a Python script and runs it, under the rules in **Python Scripts** above.
+- `<profile>/.chezmoiscripts/run_after_run-installers.py.tmpl` renders the list into a Python script and runs it, under the rules in **Python Scripts** above. Both profiles have this infrastructure and their runners are byte-identical — a change to one must be copied to the other. The runner treats a profile with no `installers` key as an empty list, so a profile that declares none does nothing.
 
 When adding an installer, **always ask the user** which profile it belongs to. Then vendor the script, add a row to `.installers/README.md`, add the entry to `installers.toml`, and update the table in the repository `README.md`. Never add an installer that fetches and pipes a remote script.
 

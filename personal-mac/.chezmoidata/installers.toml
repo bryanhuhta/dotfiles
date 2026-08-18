@@ -1,0 +1,40 @@
+# Third-party installer scripts for personal-mac, run by
+# .chezmoiscripts/run_after_run-installers.py.
+#
+# Homebrew handles anything with a formula or cask (see packages.toml). This
+# list covers the tools that only ship a `curl | sh` installer. Rather than
+# piping those from the network, the script is vendored under .installers/
+# so it is reviewed, diffable, and pinned to a known checksum — the runner
+# executes the local copy and never fetches the installer itself.
+#
+# Each entry declares the prerequisites the installer needs, so an installer
+# never runs against a half-built machine. Unmet prerequisites skip the
+# installer with a warning; the next `chezmoi apply` retries it.
+#
+# Nothing is declared yet. The runner treats a missing `installers` key as an
+# empty list, so it does nothing until the first entry is added below.
+#
+# Fields:
+#   name        stamp name under $XDG_STATE_HOME/chezmoi/installers
+#   description what the tool is
+#   script      path to the vendored script, relative to .installers/
+#   upstream    where the vendored copy came from, for refreshing it
+#   requires    commands that must be on PATH before the installer runs
+#   preflight   commands that must exit 0 before the installer runs
+#   hint        printed when a prerequisite is unmet
+#   env         environment variables set for the installer process
+#
+# To add one: vendor the script at .installers/<tool>/install.sh, add it to
+# the table in .installers/README.md, and uncomment a copy of this entry.
+#
+# [[installers]]
+#     name = "example"
+#     description = "What the tool is"
+#     script = "example/install.sh"
+#     upstream = "https://example.com/install.sh"
+#     requires = ["curl", "git"]
+#     preflight = []
+#     hint = "How to satisfy the prerequisites above."
+#
+#     [installers.env]
+#         EXAMPLE_NONINTERACTIVE = "1"
