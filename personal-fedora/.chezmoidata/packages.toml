@@ -11,6 +11,9 @@ rpms = [
     "fish",           # Shell
     "neovim",         # Editor
 
+    # Languages
+    "golang",         # go
+
     # Neovim dependencies
     "fzf",            # Fuzzy finder
     "gopls",          # Go language server

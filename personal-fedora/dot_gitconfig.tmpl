@@ -9,6 +9,7 @@
 	rebase = false
 [core]
 	excludesfile = {{ .chezmoi.homeDir }}/.gitignore_global
+	editor = nvim
 [commit]
 {{- if hasKey .git "signingkey" }}
 	gpgsign = true
