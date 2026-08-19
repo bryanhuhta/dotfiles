@@ -6,6 +6,15 @@
 
 coprs = []
 
-rpms = []
+rpms = [
+    # Core
+    "fish",           # Shell
+    "neovim",         # Editor
+
+    # Neovim dependencies
+    "fzf",            # Fuzzy finder
+    "gopls",          # Go language server
+    "python3-neovim", # neovim Python client
+]
 
 flatpaks = []
