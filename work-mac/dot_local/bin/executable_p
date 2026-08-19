@@ -1,13 +1,17 @@
-#!/bin/bash
+#!/usr/bin/python3
 ## Run profilecli against a named environment.
 ##
-## Maps an environment name to a 1Password item in the Grafana vault and
-## exports credentials from it for the profilecli invocation:
+## Maps an environment name to a 1Password item UUID plus the title of a
+## section inside that item, and exports the credentials from that section
+## for the profilecli invocation:
 ##
+##   endpoint field  ->  PROFILECLI_URL
 ##   username field  ->  PROFILECLI_USERNAME
-##   website field   ->  PROFILECLI_URL
 ##   read field      ->  PROFILECLI_PASSWORD
 ##   tenant field    ->  PROFILECLI_TENANT_ID  (optional)
+##
+## Only fields belonging to the named section are read, so several
+## environments may point at the same item through different sections.
 ##
 ## The special environment "local" fetches no secrets from 1Password; it
 ## runs profilecli as-is, picking up whatever PROFILECLI_* vars (if any)
@@ -22,73 +26,146 @@
 ##   p ops-002 query series
 ##   p local query series
 
-set -euo pipefail
+import collections
+import json
+import os
+import subprocess
+import sys
 
-# Environment name -> 1Password item name (Grafana vault).
-# To add an environment, add a line below.
+Environment = collections.namedtuple("Environment", ["item", "section"])
+
+# Environment name -> 1Password item UUID + section title within that item.
+# To add an environment, add a line below. Several environments may share an
+# item UUID as long as they name different sections.
 # (source: chezmoi edit ~/.local/bin/p)
-environments=$(cat <<'EOF'
-dev-001     grafanacloud-dev-profiles
-ops-002     grafanacloud-ops-profiles
-bloom       grafanacloud-bloom-profiles
-bryanhuhta  grafanacloud-bryanhuhta-profiles
-EOF
-)
-
-list_environments() {
-  echo "  local (no 1Password lookup)"
-  awk '{ print "  " $1 }' <<<"$environments"
+ENVIRONMENTS = {
+    "dev": Environment("6ocbpzjmwypngn23gb23ashcxq", "grafanacloud-dev-profiles"),
+    "ops": Environment("jq4z7ef72gtua5lcko24myjaei", "grafanacloud-ops-profiles"),
+    "bloom": Environment("xtliv7dmx2n32zhr6c2xddyfju", "grafanacloud-bloom-profiles"),
 }
 
-if [[ "${1:-}" == "-h" ]]; then
-  grep '^##' "$0" | sed -E 's/^## ?//'
-  echo
-  echo "Available environments:"
-  list_environments
-  exit 0
-fi
 
-if [[ $# -lt 1 ]]; then
-  echo "Error: missing environment name" >&2
-  echo "Usage: p [-h] <environment> [profilecli args...]" >&2
-  exit 1
-fi
+def help_text():
+    lines = []
+    with open(__file__) as handle:
+        for line in handle:
+            if line.startswith("##"):
+                text = line.rstrip("\n")[2:]
+                if text.startswith(" "):
+                    text = text[1:]
+                lines.append(text)
+    return "\n".join(lines)
 
-name="$1"
-shift
 
-if [[ "$name" == "local" ]]; then
-  exec profilecli "$@"
-fi
+def environment_lines():
+    lines = ["  local (no 1Password lookup)"]
+    if ENVIRONMENTS:
+        width = max(len(name) for name in ENVIRONMENTS)
+        for name, env in ENVIRONMENTS.items():
+            lines.append("  %-*s  %s" % (width, name, env.section))
+    return lines
 
-item="$(awk -v n="$name" '$1 == n { print $2 }' <<<"$environments")"
 
-if [[ -z "$item" ]]; then
-  echo "Error: unknown environment '$name'. Known environments:" >&2
-  list_environments >&2
-  exit 1
-fi
+def die(*messages):
+    for message in messages:
+        print(message, file=sys.stderr)
+    sys.exit(1)
 
-item_json="$(op item get --vault Grafana "$item" --format json)"
 
-field() {
-  jq -r --arg label "$1" \
-    '[.fields[]? | select(.label == $label or .id == $label) | .value // empty][0] // empty' \
-    <<<"$item_json"
-}
+def section_of(entry):
+    return (entry.get("section") or {}).get("label") or ""
 
-url="$(jq -r '.urls[0].href // empty' <<<"$item_json")"
-if [[ -z "$url" ]]; then
-  url="$(field website)"
-fi
 
-username="$(field username)"
-password="$(field read)"
-tenant="$(field tenant)"
+def field(fields, label):
+    """First non-empty value of a field matching label by either label or id."""
+    for entry in fields:
+        if entry.get("label") == label or entry.get("id") == label:
+            value = entry.get("value")
+            if value:
+                return value
+    return ""
 
-if [[ -n "$url" ]]; then export PROFILECLI_URL="$url"; fi
-if [[ -n "$username" ]]; then export PROFILECLI_USERNAME="$username"; fi
-if [[ -n "$password" ]]; then export PROFILECLI_PASSWORD="$password"; fi
-if [[ -n "$tenant" ]]; then export PROFILECLI_TENANT_ID="$tenant"; fi
 
-exec profilecli "$@"
+def read_item(item):
+    result = subprocess.run(
+        ["op", "item", "get", item, "--format", "json"],
+        stdout=subprocess.PIPE,
+    )
+    if result.returncode != 0:
+        sys.exit(result.returncode)
+    try:
+        return json.loads(result.stdout)
+    except ValueError as err:
+        die("Error: could not parse 1Password item '%s': %s" % (item, err))
+
+
+def section_fields(item_json, env):
+    """Fields belonging to the environment's section, or exit if it is absent."""
+    fields = item_json.get("fields") or []
+    matching = [entry for entry in fields if section_of(entry) == env.section]
+    if not matching:
+        titles = sorted({section_of(entry) for entry in fields} - {""})
+        die(
+            "Error: item %s has no section '%s'." % (env.item, env.section),
+            "Sections in this item: %s" % (", ".join(titles) or "(none)"),
+        )
+    return matching
+
+
+def run_profilecli(args):
+    try:
+        os.execvp("profilecli", ["profilecli"] + args)
+    except OSError as err:
+        print("Error: could not run profilecli: %s" % err, file=sys.stderr)
+        sys.exit(127)
+
+
+def main(argv):
+    if argv[:1] == ["-h"]:
+        print(help_text())
+        print()
+        print("Available environments:")
+        for line in environment_lines():
+            print(line)
+        return 0
+
+    if not argv:
+        die(
+            "Error: missing environment name",
+            "Usage: p [-h] <environment> [profilecli args...]",
+        )
+
+    name = argv[0]
+    args = argv[1:]
+
+    if name == "local":
+        run_profilecli(args)
+
+    env = ENVIRONMENTS.get(name)
+    if env is None:
+        die(
+            "Error: unknown environment '%s'. Known environments:" % name,
+            *environment_lines()
+        )
+
+    fields = section_fields(read_item(env.item), env)
+
+    url = field(fields, "endpoint")
+    if not url:
+        url = field(fields, "url")
+
+    credentials = [
+        ("PROFILECLI_URL", url),
+        ("PROFILECLI_USERNAME", field(fields, "username")),
+        ("PROFILECLI_PASSWORD", field(fields, "read")),
+        ("PROFILECLI_TENANT_ID", field(fields, "tenant")),
+    ]
+    for key, value in credentials:
+        if value:
+            os.environ[key] = value
+
+    run_profilecli(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
