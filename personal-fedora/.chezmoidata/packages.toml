@@ -1,0 +1,11 @@
+# Fedora packages for personal-fedora.
+#
+# Missing packages will be installed, but existing packages will not be upgraded.
+
+[packages]
+
+coprs = []
+
+rpms = []
+
+flatpaks = []
