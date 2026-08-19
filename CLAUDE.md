@@ -97,25 +97,25 @@ chezmoi data
 
 ## Profiles
 
-There are two profiles: `personal-mac` and `work-mac`. Each has its own source directory at the top of the repository; the machine-local config sets `sourceDir` to select one, and `profile` to name it.
+Each machine uses exactly one profile. Every profile has its own source directory at the top of the repository; the machine-local config sets `sourceDir` to select one, and `profile` to name it. Which profiles exist is not fixed — list the top-level directories to see the current set rather than assuming one.
 
-### Per-profile source directories (the Mac profiles)
+### Per-profile source directories
 
-`personal-mac/` and `work-mac/` are self-contained chezmoi source directories at the top of the repository. The machine-local `chezmoi.toml` points `sourceDir` at one of them, so chezmoi never sees the other profile's files at all.
+A profile directory is a self-contained chezmoi source directory at the top of the repository. The machine-local `chezmoi.toml` points `sourceDir` at one of them, so chezmoi never sees any other profile's files at all.
 
 Inside a profile directory:
 
-- There are **no `.profile` conditionals**. The directory is the condition. A file that needs to differ per profile simply differs between the two directories, and a file only one profile wants exists only in that directory.
+- There are **no `.profile` conditionals**. The directory is the condition. A file that needs to differ per profile simply differs between the profile directories, and a file only one profile wants exists only in that directory.
 - It owns its own `.chezmoiignore`, `.chezmoidata.toml`, `.chezmoidata/`, `.chezmoiexternal.toml`, and `.chezmoiscripts/`. The root copies of those files do not apply.
 - Templating is reserved for machine data (`.git.name`, `.git.email`, `hasKey .git "signingkey"`). If a file has no template actions left after de-templating, drop its `.tmpl` suffix.
 - Repository-root assets (`claude-home/`, `zed_settings.json`, the Docker build contexts) live one level up. Reach them with `{{ .chezmoi.sourceDir | dir }}` in a template and `$(dirname $(chezmoi source-path))` in a script — a bare `.chezmoi.sourceDir` resolves inside the profile directory and silently produces a dangling symlink or a missing build context.
 - Scripts belong in `.chezmoiscripts/`, not at the top level, so they run without also being written into `$HOME`.
 
-When changing something that both Macs share, make the edit in both directories. There is deliberately no shared layer between them.
+When changing something that several profiles share, make the edit in each of their directories. There is deliberately no shared layer between them.
 
 ### The repository root
 
-Nothing applies from the repository root: it holds the two profile directories, the shared assets (`claude-home/`, `zed_settings.json`, the Docker build contexts), and the documentation. Root `.chezmoiignore` is a single `{{ fail }}` — chezmoi's default source directory is the repository root, so a machine that forgets `sourceDir` would otherwise apply `personal-mac/` and `work-mac/` into `$HOME` as literal directories.
+Nothing applies from the repository root: it holds the profile directories, the shared assets (`claude-home/`, `zed_settings.json`, the Docker build contexts), and the documentation. Root `.chezmoiignore` is a single `{{ fail }}` — chezmoi's default source directory is the repository root, so a machine that forgets `sourceDir` would otherwise apply every profile directory into `$HOME` as a literal directory.
 
 ### Adding a profile
 

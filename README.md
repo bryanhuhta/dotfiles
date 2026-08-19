@@ -10,28 +10,33 @@ Setting up a new machine? Follow the runbook in [SETUP.md](SETUP.md).
 Each profile has its own self-contained chezmoi source directory at the top of
 this repository. Nothing applies from the repository root.
 
-| Profile        | Source directory |
-|----------------|------------------|
-| `personal-mac` | `personal-mac/`  |
-| `work-mac`     | `work-mac/`      |
+The profiles that exist today:
+
+| Profile           | Source directory   |
+|-------------------|--------------------|
+| `personal-mac`    | `personal-mac/`    |
+| `work-mac`        | `work-mac/`        |
+| `personal-fedora` | `personal-fedora/` |
+
+Adding one is just another top-level directory plus a machine pointed at it.
 
 A profile directory holds its own `.chezmoiignore`, `.chezmoidata/`,
 `.chezmoiexternal.toml`, and `.chezmoiscripts/`, and contains no profile
-conditionals — the directory *is* the condition. Files shared by both profiles
-(`claude-home/`, `zed_settings.json`, the Docker build contexts) stay at the
-repository root and are reached from a profile directory with
+conditionals — the directory *is* the condition. Files shared by more than one
+profile (`claude-home/`, `zed_settings.json`, the Docker build contexts) stay at
+the repository root and are reached from a profile directory with
 `{{ .chezmoi.sourceDir | dir }}` in templates, or
 `$(dirname $(chezmoi source-path))` in scripts.
 
 Because chezmoi's default source directory is the repository root, root
 `.chezmoiignore` fails with an explanatory error rather than letting a machine
-with no `sourceDir` apply `personal-mac/` and `work-mac/` into `$HOME` as
-literal directories.
+with no `sourceDir` apply every profile directory into `$HOME` as literal
+directories.
 
 ## Config
 
 Create `~/.config/chezmoi/chezmoi.toml` to configure machine-specific values.
-On a Mac, `sourceDir` selects the profile directory:
+`sourceDir` selects the profile directory:
 
 ```toml
 sourceDir = "~/.local/share/chezmoi/work-mac"
@@ -47,7 +52,7 @@ sourceDir = "~/.local/share/chezmoi/work-mac"
 | Key               | Required | Default      | Description                                                    |
 |-------------------|----------|--------------|----------------------------------------------------------------|
 | `sourceDir`       | yes      | -            | profile source directory; must match `profile`                 |
-| `profile`         | yes      | -            | dotfile profile: `personal-mac` or `work-mac`                  |
+| `profile`         | yes      | -            | dotfile profile; the name of the `sourceDir` directory         |
 | `git.name`        | yes      | -            | git username                                                   |
 | `git.email`       | yes      | -            | git email                                                      |
 | `git.signingkey`  | no       | -            | SSH public key string for commit signing; enables signing when set |

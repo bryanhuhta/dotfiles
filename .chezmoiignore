@@ -1,13 +1,13 @@
 {{- /*
 Nothing applies from the repository root.
 
-Every profile has its own self-contained source directory (personal-mac/,
-work-mac/), selected with `sourceDir` in the machine-local chezmoi.toml. The
+Every profile has its own self-contained source directory at the top of this
+repository, selected with `sourceDir` in the machine-local chezmoi.toml. The
 root holds only shared assets — claude-home/, zed_settings.json, the Docker
 build contexts — and the documentation.
 
 chezmoi's default source directory is this one, so a machine that forgets to
-set `sourceDir` would otherwise try to apply personal-mac/ and work-mac/ into
-$HOME as literal directories. Fail loudly instead.
+set `sourceDir` would otherwise try to apply every profile directory into $HOME
+as a literal directory. Fail loudly instead.
 */ -}}
-{{ fail (printf "this repository has no dotfiles at its root — set `sourceDir` in ~/.config/chezmoi/chezmoi.toml to this machine's profile directory (personal-mac or work-mac). profile is currently %q" (dig "profile" "" .)) }}
+{{ fail (printf "this repository has no dotfiles at its root — no profile is in use. Set `sourceDir` in ~/.config/chezmoi/chezmoi.toml to this machine's profile directory at the top of this repository, and `profile` to that directory's name. profile is currently %q" (dig "profile" "" .)) }}

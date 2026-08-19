@@ -1,0 +1,321 @@
+#!/usr/bin/python3
+"""Install the dnf packages and flatpaks declared in .chezmoidata/packages.toml.
+
+Do not edit the package list here. It is rendered from packages.toml, and
+chezmoi re-runs this script whenever that rendering changes.
+
+Converges only: missing packages are installed, already-installed packages are
+left at their current version, and a package removed from the list is NOT
+removed. Upgrade deliberately with `sudo dnf upgrade`.
+
+Unlike `brew bundle install`, dnf has no --no-upgrade: `dnf install foo` on an
+outdated installed foo upgrades it. So the declared list is diffed against the
+rpm database first and only the genuinely missing names are handed to dnf. (dnf
+may still pull a dependency forward if a new package needs a newer version of
+it -- the same caveat the Homebrew script on the Mac profiles carries.)
+
+Before installing, anything installed that packages.toml does not declare is
+listed and confirmed, so a package that only exists because it was installed by
+hand is visible rather than quietly diverging. On Fedora that comparison needs a
+baseline: `dnf repoquery --userinstalled` reports every package the installer
+image laid down, which is thousands of lines of noise, so the first run records
+that set under $XDG_STATE_HOME/chezmoi/packages/baseline and later runs subtract
+it. Deleting the baseline re-takes the snapshot -- but on a machine that has
+already drifted, that freezes the drift in as expected.
+
+dnf needs root. Where there is neither a cached sudo credential nor a terminal
+to type a password at, the dnf half is skipped with a warning rather than
+failing the apply, so a fresh machine can finish applying and pick the packages
+up on a later run. Flatpaks are --user installs and proceed either way.
+
+Runs under /usr/bin/python3, the system interpreter dnf itself is built on,
+rather than `/usr/bin/env python3`, so the script does not depend on PATH or on
+a mise/pyenv python. Standard library only.
+"""
+
+import glob
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+DNF = "/usr/bin/dnf"
+FLATPAK = "/usr/bin/flatpak"
+RPM = "/usr/bin/rpm"
+SUDO = "/usr/bin/sudo"
+
+FLATHUB = "https://dl.flathub.org/repo/flathub.flatpakrepo"
+
+STATE_DIR = (
+    Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
+    / "chezmoi"
+    / "packages"
+)
+BASELINE = STATE_DIR / "baseline"
+
+PACKAGES = json.loads(r"""
+{{ dict "coprs" .packages.coprs "rpms" .packages.rpms "flatpaks" .packages.flatpaks | toPrettyJson }}
+""")
+
+
+def capture(argv, quiet=False):
+    """Return the command's stdout as a list of words, or None if it failed.
+
+    `quiet` suppresses the failure report, for a probe whose failure is expected
+    and handled by the caller.
+    """
+    completed = subprocess.run(argv, capture_output=True, text=True)
+    if completed.returncode != 0:
+        if quiet:
+            return None
+        print(
+            "packages: {} failed (exit {})".format(
+                " ".join(argv), completed.returncode
+            ),
+            file=sys.stderr,
+        )
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        return None
+    return completed.stdout.split()
+
+
+def confirm(prompt):
+    """Ask on the terminal, returning None when there is nobody to ask.
+
+    The prompt reads /dev/tty rather than stdin: chezmoi does not promise a
+    usable stdin for scripts, and the terminal is what a person is actually
+    sitting at. Opening it twice, once to read and once to write, is deliberate:
+    a single "r+" handle is not seekable on every platform, which would make a
+    real terminal look like an absent one.
+
+    A closed terminal reads as EOF, which is not a yes.
+    """
+    try:
+        with open("/dev/tty", "w") as out, open("/dev/tty", "r") as tty_in:
+            out.write(prompt)
+            out.flush()
+            answer = tty_in.readline()
+    except OSError:
+        return None
+    return answer.strip().lower() in ("y", "yes")
+
+
+def have_terminal():
+    try:
+        open("/dev/tty").close()
+        return True
+    except OSError:
+        return False
+
+
+def can_reach_root():
+    """True if dnf can be run at all.
+
+    `sudo -n true` succeeds only with a cached or passwordless credential. When
+    it fails a terminal can still supply a password, so a usable /dev/tty counts
+    -- sudo itself does the prompting.
+    """
+    if os.geteuid() == 0:
+        return True
+    if subprocess.run([SUDO, "-n", "true"], capture_output=True).returncode == 0:
+        return True
+    return have_terminal()
+
+
+def as_root(argv):
+    return list(argv) if os.geteuid() == 0 else [SUDO, *argv]
+
+
+def installed_rpms():
+    """Every installed package name, or None if the rpm database is unreadable."""
+    names = capture([RPM, "-qa", "--queryformat", "%{NAME}\n"])
+    return set(names) if names is not None else None
+
+
+def user_installed_rpms():
+    """Packages not present merely as another package's dependency, or None.
+
+    The analogue of `brew list --installed-on-request` on the Mac profiles. It
+    reflects how a package was installed, not what it is now: something pulled
+    in as a dependency and later installed directly may not be marked as
+    user-installed, so it would not show up here.
+
+    `dnf repoquery --userinstalled` is the dnf5 spelling; `dnf history
+    userinstalled` is dnf4's. Try the first, fall back to the second.
+    """
+    names = capture(
+        [DNF, "repoquery", "--userinstalled", "--quiet", "--queryformat", "%{name}"],
+        quiet=True,
+    )
+    if names is not None:
+        return set(names)
+    names = capture([DNF, "history", "userinstalled"])
+    return set(names) if names is not None else None
+
+
+def installed_flatpaks():
+    ids = capture([FLATPAK, "--user", "list", "--app", "--columns=application"])
+    return set(ids) if ids is not None else set()
+
+
+def baseline(current):
+    """The recorded pre-existing package set, snapshotted on first run."""
+    if BASELINE.is_file():
+        return set(BASELINE.read_text().split())
+
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    BASELINE.write_text("\n".join(sorted(current)) + "\n")
+    print(
+        "packages: recorded {} pre-existing packages as the baseline at {}".format(
+            len(current), BASELINE
+        )
+    )
+    return set(current)
+
+
+def report_unmanaged():
+    """List undeclared packages and confirm, or return silently if there are none."""
+    user_rpms = user_installed_rpms()
+    if user_rpms is None:
+        # Without a reliable inventory the comparison would invent unmanaged
+        # packages or hide real ones. Say so and leave the install to proceed.
+        print(
+            "packages: could not inventory installed packages, "
+            "skipping the unmanaged check",
+            file=sys.stderr,
+        )
+        return
+
+    undeclared_rpms = sorted(user_rpms - set(PACKAGES["rpms"]) - baseline(user_rpms))
+    undeclared_flatpaks = sorted(installed_flatpaks() - set(PACKAGES["flatpaks"]))
+    if not undeclared_rpms and not undeclared_flatpaks:
+        return
+
+    total = len(undeclared_rpms) + len(undeclared_flatpaks)
+    print(
+        "packages: {} installed package{} not declared in packages.toml:".format(
+            total, "" if total == 1 else "s"
+        )
+    )
+    for name in undeclared_rpms:
+        print("  rpm      {}".format(name))
+    for name in undeclared_flatpaks:
+        print("  flatpak  {}".format(name))
+    print(
+        "  Add them to .chezmoidata/packages.toml to manage them, "
+        "or `sudo dnf remove` / `flatpak uninstall` to drop them."
+    )
+    # stdout is block-buffered when it is not a terminal, so without this the
+    # listing surfaces after dnf's output instead of before it.
+    sys.stdout.flush()
+
+    answer = confirm("  Continue with the package install? [y/N] ")
+    if answer is None:
+        print("packages: no terminal to confirm on, continuing", file=sys.stderr)
+        return
+    if not answer:
+        # Exiting non-zero keeps chezmoi from recording this script as run, so
+        # the next apply asks again instead of skipping the install for good.
+        print("packages: aborted", file=sys.stderr)
+        sys.exit(1)
+
+
+def copr_enabled(repo):
+    """True if the copr plugin has already written a repo file for owner/project.
+
+    The plugin names it _copr:copr.fedorainfracloud.org:<owner>:<project>.repo.
+    Checking the file needs no root and no parsing of `dnf repo list` output; if
+    the naming ever changes the worst case is a redundant `copr enable`, which
+    is harmless.
+    """
+    owner, _, project = repo.partition("/")
+    pattern = "/etc/yum.repos.d/_copr*:{}:{}.repo".format(owner, project)
+    return bool(glob.glob(pattern))
+
+
+def install_coprs():
+    missing = [repo for repo in PACKAGES["coprs"] if not copr_enabled(repo)]
+    for repo in missing:
+        print("packages: enabling copr {}".format(repo))
+        sys.stdout.flush()
+        if subprocess.run(as_root([DNF, "-y", "copr", "enable", repo])).returncode != 0:
+            print("packages: could not enable copr {}".format(repo), file=sys.stderr)
+            return False
+    return True
+
+
+def install_rpms():
+    if not PACKAGES["rpms"]:
+        return True
+
+    present = installed_rpms()
+    if present is None:
+        print("packages: could not read the rpm database", file=sys.stderr)
+        return False
+
+    missing = [name for name in PACKAGES["rpms"] if name not in present]
+    if not missing:
+        print("packages: all {} declared rpms present".format(len(PACKAGES["rpms"])))
+        return True
+
+    print("packages: installing {}".format(" ".join(missing)))
+    sys.stdout.flush()
+    return subprocess.run(as_root([DNF, "-y", "install", *missing])).returncode == 0
+
+
+def install_flatpaks():
+    if not PACKAGES["flatpaks"]:
+        return True
+    if not os.path.exists(FLATPAK):
+        print(
+            "packages: {} not found, skipping flatpaks".format(FLATPAK),
+            file=sys.stderr,
+        )
+        return False
+
+    subprocess.run(
+        [FLATPAK, "--user", "remote-add", "--if-not-exists", "flathub", FLATHUB],
+        check=False,
+    )
+
+    present = installed_flatpaks()
+    missing = [app for app in PACKAGES["flatpaks"] if app not in present]
+    if not missing:
+        return True
+
+    print("packages: installing flatpaks {}".format(" ".join(missing)))
+    sys.stdout.flush()
+    completed = subprocess.run(
+        [FLATPAK, "--user", "install", "-y", "--noninteractive", "flathub", *missing]
+    )
+    return completed.returncode == 0
+
+
+def main():
+    if not os.path.exists(DNF):
+        print("packages: {} not found".format(DNF), file=sys.stderr)
+        sys.exit(1)
+
+    report_unmanaged()
+
+    ok = True
+    if PACKAGES["coprs"] or PACKAGES["rpms"]:
+        if can_reach_root():
+            ok = install_coprs() and install_rpms()
+        else:
+            # A fresh machine with no sudo credential and no terminal should
+            # still finish applying; the next apply picks the packages up.
+            print(
+                "packages: no way to obtain root, skipping coprs and rpms",
+                file=sys.stderr,
+            )
+
+    ok = install_flatpaks() and ok
+
+    if not ok:
+        sys.exit(1)
+
+
+main()

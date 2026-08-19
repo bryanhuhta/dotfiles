@@ -71,10 +71,10 @@ sourceDir = "~/.local/share/chezmoi/work-mac"
     signingkey = "ssh-ed25519 AAAA..."
 ```
 
-`sourceDir` and `profile` must agree — `personal-mac`/`personal-mac`, or
-`work-mac`/`work-mac`. Both are required: nothing applies from the repository
-root, and chezmoi's default source directory is the root, so omitting
-`sourceDir` fails with an explanatory error.
+`sourceDir` and `profile` must agree: `sourceDir` points at a profile directory
+at the top of the repository, and `profile` is that directory's name. Both are
+required: nothing applies from the repository root, and chezmoi's default source
+directory is the root, so omitting `sourceDir` fails with an explanatory error.
 
 `signingkey` is the **public** key of the 1Password SSH key (copy it from the
 key's item in 1Password). See `README.md` for the full list of supported
