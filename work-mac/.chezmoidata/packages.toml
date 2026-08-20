@@ -11,7 +11,8 @@
 [packages]
 
 taps = [
-  "agavra/tap",  # git review TUI
+  "agavra/tap",     # git review TUI
+  "kdash-rs/kdash", # Kubernetes TUI
 ]
 
 brews = [
@@ -29,6 +30,7 @@ brews = [
   "azure-cli",            # Azure cli
   "helm",                 # Kubernetes package manager
   "go-jsonnet",           # Jsonnet language (Go implementation)
+  "kdash",                # Kubernetes TUI
   "kubectx",              # List and switch between Kubernetes contexts
   "kubernetes-cli",       # kubectl
   "tanka",                # Grafana's Jsonnet-based Kubernetes config tool
