@@ -41,8 +41,10 @@ export PATH="$PATH:${DEPLOY_TOOLS_DIR}/scripts/gcom"
 # GCOM
 export GCOM_CONFIG_DIR="$HOME/.gcom"
 
-# k8s contexts
-export KUBECONFIG="$HOME/.kube/config":"$HOME/.kube/config-kind"
+# k8s contexts. config-tailscale-auth carries the `tailscale-auth` user that
+# every tailnet-reached context references; it is kept out of ~/.kube/config
+# because setup-context rewrites that file and drops the stanza.
+export KUBECONFIG="$HOME/.kube/config":"$HOME/.kube/config-kind":"$HOME/.kube/config-tailscale-auth"
 
 # Google cloud sdk components (gcloud itself is linked into brew's bin by
 # the gcloud-cli cask; components like gke-gcloud-auth-plugin land here)

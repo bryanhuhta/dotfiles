@@ -1,0 +1,25 @@
+# Kubeconfig fragment holding the `tailscale-auth` user, merged into
+# $KUBECONFIG by .zprofile.
+#
+# Every cluster reached over the tailnet (all ops-*, prod-*, capi-*, metal-*
+# contexts) points its context at a user named `tailscale-auth`. The tailnet
+# itself does the authenticating: the API server sits behind a Tailscale node,
+# so the client needs no real credential and the token below is the literal
+# placeholder string that deployment_tools' setup-context writes
+# (scripts/setup-context/tailscale.go). It is not a secret.
+#
+# It lives here rather than in ~/.kube/config because setup-context rewrites
+# that file wholesale and has been observed dropping this user stanza, which
+# leaves ~40 contexts pointing at a user that does not exist. kubectl then has
+# no credential at all and falls back to prompting for a basic-auth username --
+# which surfaces in non-interactive callers like `tk diff` as a bare
+# "error: EOF" from `kubectl version`.
+#
+# ~/.kube/config is listed first in $KUBECONFIG, so if setup-context ever does
+# emit its own tailscale-auth user, that one wins and this fragment is inert.
+apiVersion: v1
+kind: Config
+users:
+  - name: tailscale-auth
+    user:
+      token: unused
