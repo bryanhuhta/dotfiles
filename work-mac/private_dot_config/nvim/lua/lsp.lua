@@ -1,3 +1,19 @@
+-- Prevent ts_ls from flagging or removing `import React` as unused: TypeScript
+-- reports it as 6133 ("declared but its value is never read"), which drives
+-- both the diagnostic and the quick-fix offered for it.
+local function is_react_unused_import(d)
+  return d.code == 6133 and d.message ~= nil and d.message:match("'React'") ~= nil
+end
+
+-- Code actions carry the diagnostics they resolve, so dropping any action tied
+-- to the React 6133 diagnostic keeps that quick-fix out of the picker.
+local function code_action_filter(action)
+  for _, d in ipairs(action.diagnostics or {}) do
+    if is_react_unused_import(d) then return false end
+  end
+  return true
+end
+
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(ev)
     local buf = ev.buf
@@ -11,41 +27,14 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("n", "gi",         vim.lsp.buf.implementation, "Go to implementation")
     map("n", "K",          vim.lsp.buf.hover,          "Hover documentation")
     map("n", "<leader>rn", vim.lsp.buf.rename,         "Rename symbol")
-    map("n", "<leader>ca", vim.lsp.buf.code_action,    "Code action")
+    map("n", "<leader>ca", function()
+      vim.lsp.buf.code_action({ filter = code_action_filter })
+    end, "Code action")
     map("n", "<leader>e",  vim.diagnostic.open_float,  "Show line diagnostics")
     map("n", "[d",         function() vim.diagnostic.jump({ count = -1 }) end, "Previous diagnostic")
     map("n", "]d",         function() vim.diagnostic.jump({ count = 1 }) end,  "Next diagnostic")
   end,
 })
-
--- Prevent ts_ls from flagging or removing `import React` as unused.
--- Covers the diagnostic hint (6133) and code actions like "Remove all unused imports".
-local function is_react_import_line(line)
-  return line:match("import.*React.*from%s+['\"]react['\"]") ~= nil
-end
-
-local function filter_react_import_edits(edit, bufnr)
-  local uri = vim.uri_from_bufnr(bufnr)
-  local function keep_edit(text_edit)
-    local lines = vim.api.nvim_buf_get_lines(
-      bufnr, text_edit.range.start.line, text_edit.range["end"].line + 1, false
-    )
-    for _, line in ipairs(lines) do
-      if is_react_import_line(line) then return false end
-    end
-    return true
-  end
-  if edit.changes and edit.changes[uri] then
-    edit.changes[uri] = vim.tbl_filter(keep_edit, edit.changes[uri])
-  end
-  if edit.documentChanges then
-    for _, change in ipairs(edit.documentChanges) do
-      if change.textDocument and change.textDocument.uri == uri and change.edits then
-        change.edits = vim.tbl_filter(keep_edit, change.edits)
-      end
-    end
-  end
-end
 
 vim.lsp.config("ts_ls", {
   cmd = { "typescript-language-server", "--stdio" },
@@ -58,42 +47,19 @@ vim.lsp.config("ts_ls", {
       importModuleSpecifierPreference = "shortest",
     },
   },
+  -- Only publishDiagnostics belongs here. Neovim 0.12 builds its own callbacks
+  -- for textDocument/codeAction and codeAction/resolve (see the note above
+  -- vim.lsp.buf.code_action in runtime/lua/vim/lsp/buf.lua), so a client
+  -- handler for either is never consulted -- code actions are filtered at the
+  -- keymap instead, via code_action_filter above.
   handlers = {
     ["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
       if result and result.diagnostics then
         result.diagnostics = vim.tbl_filter(function(d)
-          return not (d.code == 6133 and d.message:match("'React'"))
+          return not is_react_unused_import(d)
         end, result.diagnostics)
       end
       vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx, config)
-    end,
-    ["textDocument/codeAction"] = function(err, result, ctx)
-      if result then
-        for i = #result, 1, -1 do
-          local action = result[i]
-          -- Drop individual quick-fixes tied to the React 6133 diagnostic
-          if action.diagnostics then
-            for _, d in ipairs(action.diagnostics) do
-              if d.code == 6133 and d.message:match("'React'") then
-                table.remove(result, i)
-                goto next_action
-              end
-            end
-          end
-          -- Strip React-import edits from bulk actions (e.g. "Remove all unused imports")
-          if action.edit then
-            filter_react_import_edits(action.edit, ctx.bufnr)
-          end
-          ::next_action::
-        end
-      end
-      vim.lsp.handlers["textDocument/codeAction"](err, result, ctx)
-    end,
-    ["codeAction/resolve"] = function(err, result, ctx)
-      if result and result.edit then
-        filter_react_import_edits(result.edit, ctx.bufnr)
-      end
-      vim.lsp.handlers["codeAction/resolve"](err, result, ctx)
     end,
   },
 })

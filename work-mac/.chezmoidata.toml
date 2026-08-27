@@ -17,3 +17,12 @@
     # run_onchange_after_install-node.py.
     # Bump this and run `chezmoi apply` to install the new version.
     version = "24.18.1"
+
+    # npm packages installed globally into the pinned version by that same
+    # script. nvm scopes globals to a single Node.js version, so bumping
+    # `version` above re-runs the script and reinstalls these into the new
+    # version's bin directory.
+    globals = [
+        "typescript",                   # tsserver, which ts_ls wraps
+        "typescript-language-server",   # TypeScript/JavaScript language server
+    ]

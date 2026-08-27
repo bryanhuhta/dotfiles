@@ -1,9 +1,15 @@
 #!/usr/bin/python3
-"""Install the pinned Node.js version via nvm and enable corepack, which provides yarn.
+"""Install the pinned Node.js version via nvm, enable corepack (which provides yarn), and install the global npm packages.
 
-Do not edit the version here. It is rendered from node.version in
-.chezmoidata.toml, and chezmoi re-runs this script whenever that rendering
-changes -- so bumping node.version installs the new version on the next apply.
+Do not edit the version or the package list here. Both are rendered from
+node.version and node.globals in .chezmoidata.toml, and chezmoi re-runs this
+script whenever that rendering changes -- so bumping node.version installs the
+new version on the next apply, and editing node.globals reinstalls the list.
+
+nvm scopes global npm packages to a single Node.js version, so a version bump
+leaves them behind in the old version's bin directory. Rendering the list into
+this script ties the two together: the bump changes the rendering, the script
+re-runs, and the globals land in the new version alongside it.
 
 nvm itself is installed by .chezmoiexternal.toml; the `after_` attribute makes
 this run after the file phase, so ~/.nvm is guaranteed to exist.
@@ -29,13 +35,23 @@ from pathlib import Path
 
 VERSION = "{{ .node.version }}"
 
+GLOBALS = [
+{{- if hasKey .node "globals" }}
+{{- range .node.globals }}
+    "{{ . }}",
+{{- end }}
+{{- end }}
+]
+
 NVM_DIR = Path.home() / ".nvm"
 
 
-def nvm(snippet):
+def nvm(snippet, args=()):
     """Run a bash snippet with nvm loaded, exiting on failure.
 
-    The snippet receives the pinned version as "$1".
+    The snippet receives the pinned version as "$1" and any extra args from
+    "$2" onward, so a package list reaches npm as real argv entries rather
+    than being interpolated into the snippet text.
     """
     completed = subprocess.run(
         [
@@ -44,7 +60,8 @@ def nvm(snippet):
             '. "$NVM_DIR/nvm.sh"\n' + snippet,
             "install-node",
             VERSION,
-        ],
+        ]
+        + list(args),
         env=dict(os.environ, NVM_DIR=str(NVM_DIR)),
     )
     if completed.returncode != 0:
@@ -80,6 +97,14 @@ def main():
     # version's bin directory, respecting each project's packageManager field.
     sys.stdout.flush()
     nvm('nvm alias default "$1" && nvm use "$1" && corepack enable')
+
+    # npm install -g is a converging upgrade: it installs what is missing and
+    # moves anything already there to the current registry version. This only
+    # runs when the rendering changed, so that is once per version bump or
+    # package-list edit, not on every apply.
+    if GLOBALS:
+        sys.stdout.flush()
+        nvm('nvm use "$1" >/dev/null && npm install -g "${@:2}"', GLOBALS)
 
 
 main()

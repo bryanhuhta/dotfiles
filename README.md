@@ -96,6 +96,14 @@ Homebrew and brew's `yarn` would drag in brew's own `node`):
   (old versions are kept; remove them with `nvm uninstall <version>`).
 - **yarn** comes from Corepack (bundled with node), enabled by the same
   script — there is no separate yarn install.
+- **Global npm packages** are listed as `node.globals` in the profile's
+  `.chezmoidata.toml` and installed by the same script (`work-mac` only;
+  the key is optional and a profile without it installs nothing). nvm scopes
+  globals to one Node.js version, so the list is rendered into the script:
+  bumping `node.version` changes the rendering, re-runs the script, and
+  reinstalls the packages into the new version. `work-mac` uses this for
+  `typescript` and `typescript-language-server`, which back the `ts_ls`
+  language server in Neovim.
 
 ## Installer scripts
 
