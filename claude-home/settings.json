@@ -4,6 +4,7 @@
       "Bash(gcx *)"
     ]
   },
+  "model": "opus[1m]",
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "slack@claude-plugins-official": true
@@ -14,6 +15,5 @@
   "awaySummaryEnabled": false,
   "skipWorkflowUsageWarning": true,
   "theme": "auto",
-  "editorMode": "normal",
-  "model": "opus"
+  "editorMode": "normal"
 }

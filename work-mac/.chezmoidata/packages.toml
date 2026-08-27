@@ -48,6 +48,7 @@ brews = [
   "openjdk@21",           # LTS JDK, registered with jenv for version switching
   "pipx",                 # Python package manager
   "protobuf",             # Protocol buffers (protoc)
+  "weave",                # Git merge driver
   "zig",                  # Zig programming language
 
   # Productivity tools
