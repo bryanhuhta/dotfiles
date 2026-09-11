@@ -25,6 +25,7 @@ brews = [
   "tree-sitter-cli",      # Compiles nvim-treesitter grammars
 
   # Development tools
+  "gcx",                  # Grafana CLI
   "gh",                   # GitHub cli
   "git",                  # Version control system
   "git-lfs",              # Large file storage (gitconfig declares required lfs filters)
