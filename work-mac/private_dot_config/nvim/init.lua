@@ -63,30 +63,78 @@ vim.keymap.set("n", "<leader>r", ":set relativenumber!<CR>", { desc = "Toggle re
 vim.keymap.set("n", "<Leader>w", ":%s/\\s\\+$//e<CR>", { desc = "Trim trailing whitespace" })
 vim.keymap.set("n", "<S-CR>", "m`o<Esc>``", { desc = "Insert blank line below cursor" })
 
+-- Reflows a single paragraph (a list of non-blank lines) to fit within
+-- `width` columns, preserving the first line's leading indent on every
+-- wrapped line. Words wider than the available width are placed on their
+-- own line rather than split.
+local function wrap_paragraph(lines, width)
+  local indent = lines[1]:match("^%s*") or ""
+  local indent_width = vim.fn.strdisplaywidth(indent)
+
+  local words = {}
+  for _, line in ipairs(lines) do
+    for word in line:gmatch("%S+") do
+      table.insert(words, word)
+    end
+  end
+  if #words == 0 then
+    return { "" }
+  end
+
+  local wrapped = {}
+  local current, current_width
+  for _, word in ipairs(words) do
+    local word_width = vim.fn.strdisplaywidth(word)
+    if current == nil then
+      current, current_width = indent .. word, indent_width + word_width
+    elseif current_width + 1 + word_width <= width then
+      current, current_width = current .. " " .. word, current_width + 1 + word_width
+    else
+      table.insert(wrapped, current)
+      current, current_width = indent .. word, indent_width + word_width
+    end
+  end
+  table.insert(wrapped, current)
+  return wrapped
+end
+
+-- Hard-wraps the visually selected lines to 80 columns. Blank lines inside
+-- the selection are treated as paragraph breaks and preserved; everything
+-- else is reflowed as plain text, ignoring 'formatoptions'/'comments' so the
+-- result doesn't depend on filetype settings. Always operates on the full
+-- lines spanned by the selection, so it behaves the same for charwise,
+-- linewise, and blockwise visual selections.
+--
+-- Reads the selection via getpos("v")/getpos(".") rather than the '</'>
+-- marks: a Lua-function right-hand side of a Visual-mode mapping runs while
+-- Visual mode is still active, before those marks are updated.
 local function reflow_selection()
-  local saved_tw = vim.bo.textwidth
-  local saved_fe = vim.bo.formatexpr
-  vim.bo.textwidth = 80
-  vim.bo.formatexpr = ""
-
   local buf = vim.api.nvim_get_current_buf()
-  local end_line = vim.fn.line("'>")  -- 1-indexed
+  local start_line = math.min(vim.fn.getpos("v")[2], vim.fn.getpos(".")[2])
+  local end_line = math.max(vim.fn.getpos("v")[2], vim.fn.getpos(".")[2])
+  local lines = vim.api.nvim_buf_get_lines(buf, start_line - 1, end_line, false)
 
-  -- Insert a blank line after the selection as a paragraph boundary so gq
-  -- does not pull in the following line. Track it with an extmark so we can
-  -- find and remove it after reformatting regardless of how lines shift.
-  vim.fn.append(end_line, "")
-  local ns = vim.api.nvim_create_namespace("reflow_sentinel")
-  local mark_id = vim.api.nvim_buf_set_extmark(buf, ns, end_line, 0, {})
+  local result = {}
+  local paragraph = {}
+  local function flush()
+    if #paragraph > 0 then
+      vim.list_extend(result, wrap_paragraph(paragraph, 80))
+      paragraph = {}
+    end
+  end
 
-  vim.cmd("normal! gvgq")
+  for _, line in ipairs(lines) do
+    if line:match("^%s*$") then
+      flush()
+      table.insert(result, line)
+    else
+      table.insert(paragraph, line)
+    end
+  end
+  flush()
 
-  local pos = vim.api.nvim_buf_get_extmark_by_id(buf, ns, mark_id, {})
-  vim.api.nvim_buf_set_lines(buf, pos[1], pos[1] + 1, false, {})
-  vim.api.nvim_buf_del_extmark(buf, ns, mark_id)
-
-  vim.bo.textwidth = saved_tw
-  vim.bo.formatexpr = saved_fe
+  vim.cmd("normal! \27") -- leave Visual mode before editing the buffer
+  vim.api.nvim_buf_set_lines(buf, start_line - 1, end_line, false, result)
 end
 vim.keymap.set("v", "<Leader>W", reflow_selection, { desc = "Hard wrap selection to 80 columns" })
 
