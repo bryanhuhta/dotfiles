@@ -45,6 +45,7 @@ casks = [
 
   # Development tools
   "claude-code",    # Claude Code
+  "codex",          # ChatGPT Codex
   "ghostty",        # Terminal emulator
   "orbstack",       # Docker engine and cli (docker, buildx, compose, credential helper)
   "zed",            # GUI code editor
