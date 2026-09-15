@@ -1,0 +1,9 @@
+-- sqlite3 CLI defaults. Read at startup from the home directory; command-line
+-- flags (-csv, -json, -line, ...) and in-session dot-commands override it.
+
+-- Render query results as an ASCII table with column headers.
+.mode table
+.headers on
+
+-- Distinguish SQL NULL from an empty string.
+.nullvalue NULL
