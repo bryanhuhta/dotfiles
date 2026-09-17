@@ -51,8 +51,9 @@ casks = [
   "zed",            # GUI code editor
 
   # Productivity tools
-  "firefox",        # Firefox web browser
   "1password-cli",  # 1Password cli
+  "firefox",        # Firefox web browser
+  "google-chrome",  # Chrome browser
   "markedit",       # Markdown reader
   "rectangle",      # Window manager
 ]
