@@ -24,6 +24,9 @@ brews = [
   "tree",                 # Display directories as trees
   "tree-sitter-cli",      # Compiles nvim-treesitter grammars
 
+  # Personal
+  "hledger",              # Double-entry accounting
+
   # Development tools
   "gcx",                  # Grafana CLI
   "gh",                   # GitHub cli
