@@ -25,6 +25,7 @@ brews = [
   "tree-sitter-cli",      # Compiles nvim-treesitter grammars
 
   # Personal
+  "beancount",            # Double-entry accounting
   "hledger",              # Double-entry accounting
 
   # Development tools
@@ -34,6 +35,7 @@ brews = [
   "git-lfs",              # Large file storage (gitconfig declares required lfs filters)
   "go",                   # go programming language
   "pipx",                 # Python environment manager
+  "uv",                   # Python environment manager
   "zig",                  # Zig programming language
 
   # Neovim dependencies
