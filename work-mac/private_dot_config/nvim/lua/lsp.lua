@@ -143,3 +143,12 @@ vim.lsp.config("zls", {
   root_markers = { "build.zig", "build.zig.zon", ".git" },
 })
 vim.lsp.enable("zls")
+
+-- The analysis server ships inside the Dart SDK, which the flutter cask
+-- bundles; `dart` on PATH is Homebrew's shim for it.
+vim.lsp.config("dartls", {
+  cmd = { "dart", "language-server", "--protocol=lsp" },
+  filetypes = { "dart" },
+  root_markers = { "pubspec.yaml", ".git" },
+})
+vim.lsp.enable("dartls")

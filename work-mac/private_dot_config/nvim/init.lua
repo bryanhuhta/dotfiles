@@ -157,7 +157,7 @@ vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 
 -- Start treesitter highlighting
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "go", "typescript", "typescriptreact", "lua", "markdown", "c", "cpp" },
+  pattern = { "go", "typescript", "typescriptreact", "lua", "markdown", "c", "cpp", "dart" },
   callback = function() pcall(vim.treesitter.start) end,
 })
 
@@ -168,6 +168,16 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.tabstop = 2
     vim.opt_local.shiftwidth = 2
     vim.opt_local.expandtab = false
+  end,
+})
+
+-- `dart format` is hard-coded to two-space indentation and offers no option to
+-- change it, and Neovim ships no indent/dart.vim, so set it per buffer.
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "dart",
+  callback = function()
+    vim.opt_local.tabstop = 2
+    vim.opt_local.shiftwidth = 2
   end,
 })
 
