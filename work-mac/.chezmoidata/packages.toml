@@ -47,6 +47,7 @@ brews = [
   "mise",                 # Polyglot runtime manager (for Grafana Assistant development)
   "openjdk@21",           # LTS JDK, registered with jenv for version switching
   "pipx",                 # Python package manager
+  "pi-coding-agent",      # Pi agent
   "protobuf",             # Protocol buffers (protoc)
   "weave",                # Git merge driver
   "zig",                  # Zig programming language
