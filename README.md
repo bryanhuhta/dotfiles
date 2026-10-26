@@ -109,6 +109,41 @@ Homebrew and brew's `yarn` would drag in brew's own `node`):
   `typescript` and `typescript-language-server`, which back the `ts_ls`
   language server in Neovim.
 
+## Go tools
+
+A few programs ship only as a Go module — no Homebrew formula or cask, and no
+`curl | sh` installer either. Those are managed on `work-mac` the same way
+packages are, a declarative list plus one converging script, except that
+`go install` builds each one from source at the pinned version:
+
+- **The list** is `work-mac/.chezmoidata/go-tools.toml`. Each `go.tools` entry
+  is the module path to install and the version to pin. Pin a concrete version
+  rather than `latest`: the binary is stamped with whatever `latest` resolved
+  to, which never equals the literal string, so a `latest` entry rebuilds every
+  time the script runs.
+- **The runner** is
+  `work-mac/.chezmoiscripts/run_onchange_after_install-go-tools.py`. It builds
+  into `$(go env GOBIN)`, or `$(go env GOPATH)/bin` when `GOBIN` is unset,
+  which `.zprofile` puts on `PATH`. It runs in the `after_` phase so the `go`
+  formula it needs is already installed.
+- **Adding or bumping** a tool changes the rendering and re-runs the script on
+  the next apply. Each tool is checked separately against the version stamped
+  into its installed binary (read with `go version -m`, which is correct even
+  though a `go install` build carries no `-ldflags` version), so bumping one
+  tool does not rebuild the others.
+
+Converges only: a tool is built when it is missing or stamped with a different
+version, and a tool removed from the list is **not** uninstalled — drop it with
+`rm $(go env GOPATH)/bin/<name>`. Unlike the Homebrew script this does not
+audit the bin directory, so a binary installed there by hand is invisible
+rather than reported.
+
+Currently managed this way:
+
+| Profile    | Tool                                                                         | Purpose                                |
+|------------|------------------------------------------------------------------------------|----------------------------------------|
+| `work-mac` | [jsonnet-language-server](https://github.com/grafana/jsonnet-language-server) | `jsonnet_ls` language server in Neovim |
+
 ## Installer scripts
 
 Some tools ship no Homebrew formula or cask, only a `curl … | sh` installer.

@@ -1,0 +1,176 @@
+#!/usr/bin/python3
+"""Install the Go tools declared in .chezmoidata/go-tools.toml.
+
+Do not edit the tool list here. It is rendered from go.tools in that file, and
+chezmoi re-runs this script whenever that rendering changes -- so adding a tool
+or bumping a version installs it on the next apply.
+
+This is the Homebrew package list's counterpart for programs that ship only as
+a Go module: a declarative list plus one converging script. `go install` is the
+whole mechanism, which means every tool is built from source at the pinned
+version rather than downloaded as a release binary.
+
+Converges only: a tool is built when it is missing or stamped with a different
+version, and a tool dropped from the list is NOT uninstalled. Unlike the
+Homebrew script this does not audit the bin directory, so a binary installed by
+hand is invisible here rather than reported.
+
+Each tool is checked separately against the version stamped into its installed
+binary, so adding one tool does not rebuild the others -- worth having because
+the whole list re-renders whenever any entry changes, and a Go build is slow
+enough to notice.
+
+The stamp is read with `go version -m`, which reports the module version from
+the build info Go embeds in every module-built binary. That is deliberate: a
+`go install` build carries no -ldflags, so a tool's own --version flag may
+report an unstamped placeholder while the build info is still correct.
+
+A failed build is reported and the remaining tools are still attempted, so one
+broken module does not hide the rest. The script then exits non-zero, which
+leaves it unrecorded so the next apply retries.
+
+Runs under /usr/bin/python3 (the Xcode Command Line Tools build, 3.9) rather
+than `/usr/bin/env python3`, so the script does not depend on PATH or on a
+Homebrew python that may be mid-upgrade. Keep the code 3.9-compatible.
+
+Runs in the `after_` phase so it follows run_onchange_install-packages.py,
+which installs the `go` formula this needs.
+"""
+
+import json
+import os
+import re
+import subprocess
+import sys
+
+GO = "/opt/homebrew/bin/go"
+
+TOOLS = json.loads(r"""
+{{ .go.tools | toPrettyJson }}
+""")
+
+# A module path may end in a major-version element, which is part of the path
+# but not of the program name: github.com/foo/bar/v2 installs as `bar`.
+MAJOR_VERSION = re.compile(r"^v[0-9]+$")
+
+
+def go(*args):
+    """Return go's stdout, or None if the command failed."""
+    completed = subprocess.run(
+        [GO, *args],
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        print(
+            "go-tools: {} failed (exit {})".format(
+                " ".join(("go",) + args), completed.returncode
+            ),
+            file=sys.stderr,
+        )
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        return None
+    return completed.stdout
+
+
+def binary_name(module):
+    """Return the name `go install` gives the module's binary."""
+    parts = module.split("/")
+    if len(parts) > 1 and MAJOR_VERSION.match(parts[-1]):
+        parts.pop()
+    return parts[-1]
+
+
+def bin_dir():
+    """Return the directory `go install` writes to, or None if go cannot say.
+
+    GOBIN wins when set; otherwise the destination is GOPATH/bin. Asking go
+    rather than assuming ~/go/bin keeps this correct if either is ever set in
+    the shell profile.
+    """
+    gobin = go("env", "GOBIN")
+    if gobin is None:
+        return None
+    gobin = gobin.strip()
+    if gobin:
+        return gobin
+
+    gopath = go("env", "GOPATH")
+    if gopath is None:
+        return None
+    gopath = gopath.strip()
+    if not gopath:
+        print("go-tools: go reports neither GOBIN nor GOPATH", file=sys.stderr)
+        return None
+    return os.path.join(gopath, "bin")
+
+
+def installed_version(path):
+    """Return the module version stamped into an installed binary, or None.
+
+    `go version -m` prints the binary's build info as tab-separated lines; the
+    `mod` line names the main module and the version it was built from. A
+    binary that is missing, unreadable, or not built by the Go toolchain makes
+    the command fail, which reads the same as "not installed" here.
+    """
+    completed = subprocess.run(
+        [GO, "version", "-m", path],
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return None
+    for line in completed.stdout.splitlines():
+        fields = line.strip().split("\t")
+        if len(fields) >= 3 and fields[0] == "mod":
+            return fields[2]
+    return None
+
+
+def main():
+    if not os.path.exists(GO):
+        print(
+            "go-tools: {} not found, expected the `go` formula from "
+            ".chezmoidata/packages.toml".format(GO),
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    if not TOOLS:
+        return
+
+    destination = bin_dir()
+    if destination is None:
+        sys.exit(1)
+
+    failed = []
+    for tool in TOOLS:
+        module = tool["module"]
+        version = tool["version"]
+        name = binary_name(module)
+
+        if installed_version(os.path.join(destination, name)) == version:
+            print("go-tools: {} {} already installed".format(name, version))
+            continue
+
+        print("go-tools: installing {}@{} into {}".format(module, version, destination))
+        # stdout is block-buffered when it is not a terminal, so without this
+        # the line above surfaces after go's own output instead of before it.
+        sys.stdout.flush()
+        completed = subprocess.run([GO, "install", "{}@{}".format(module, version)])
+        if completed.returncode != 0:
+            print(
+                "go-tools: {}@{} failed to build (exit {})".format(
+                    module, version, completed.returncode
+                ),
+                file=sys.stderr,
+            )
+            failed.append(name)
+
+    if failed:
+        print("go-tools: {} not installed".format(", ".join(failed)), file=sys.stderr)
+        sys.exit(1)
+
+
+main()

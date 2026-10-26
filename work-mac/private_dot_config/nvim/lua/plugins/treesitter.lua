@@ -7,6 +7,7 @@ return {
     -- present. Compiling requires the tree-sitter CLI (Brewfile).
     require("nvim-treesitter").install({
       "typescript", "tsx", "go", "lua", "markdown", "markdown_inline", "c", "cpp", "dart",
+      "jsonnet",
     })
   end,
 }

@@ -152,3 +152,25 @@ vim.lsp.config("dartls", {
   root_markers = { "pubspec.yaml", ".git" },
 })
 vim.lsp.enable("dartls")
+
+-- Built from source by .chezmoiscripts/run_onchange_after_install-go-tools.py
+-- into ~/go/bin; the server has no Homebrew formula.
+vim.lsp.config("jsonnet_ls", {
+  cmd = { "jsonnet-language-server" },
+  -- Both .jsonnet and .libsonnet resolve to the `jsonnet` filetype, so there
+  -- is no separate "libsonnet" filetype to list here.
+  filetypes = { "jsonnet" },
+  root_markers = { "jsonnetfile.json", ".git" },
+  -- Sent as workspace/didChangeConfiguration, which this server reads as a
+  -- flat map -- the keys are not nested under a section name.
+  settings = {
+    -- Resolve imports the way Tanka does, from an environment's vendor/ and
+    -- lib/ layout, rather than from a fixed jpath. Tanka is linked into the
+    -- server as a library, so this needs no `tk` on PATH.
+    resolve_paths_with_tanka = true,
+    enable_eval_diagnostics = true,
+    enable_lint_diagnostics = true,
+    show_docstring_in_completion = true,
+  },
+})
+vim.lsp.enable("jsonnet_ls")

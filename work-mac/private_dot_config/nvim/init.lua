@@ -211,3 +211,9 @@ vim.api.nvim_create_autocmd("BufWritePre", {
   pattern = { "*.zig", "*.zon" },
   callback = function() vim.lsp.buf.format({ async = false }) end,
 })
+
+-- Format with the go-jsonnet formatter on save via jsonnet_ls
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = { "*.jsonnet", "*.libsonnet" },
+  callback = function() vim.lsp.buf.format({ async = false }) end,
+})

@@ -1,0 +1,27 @@
+# Go tools for work-mac, installed by
+# .chezmoiscripts/run_onchange_after_install-go-tools.py.
+#
+# For programs distributed only as a Go module, with no Homebrew formula or
+# cask and no `curl | sh` installer. `go install module@version` builds them
+# from source into $(go env GOPATH)/bin, which .zprofile puts on PATH.
+#
+# The list is rendered into that script, so editing this file changes the
+# script's content and chezmoi re-runs it on the next apply. The script checks
+# each tool's installed version individually, so bumping one tool does not
+# rebuild the others.
+#
+# Converges only: a tool is built when it is missing or stamped with a
+# different version, and a tool removed from this list is NOT uninstalled.
+# Remove it deliberately with `rm $(go env GOPATH)/bin/<name>`.
+#
+# Pin a concrete version, not `latest`: the installed binary is stamped with
+# the version it resolved to, which never equals the literal string "latest",
+# so a `latest` entry rebuilds every time the script runs.
+
+[go]
+
+tools = [
+    # Jsonnet language server (jsonnet_ls in Neovim). Releases:
+    # https://github.com/grafana/jsonnet-language-server/releases
+    { module = "github.com/grafana/jsonnet-language-server", version = "v0.17.0" },
+]
