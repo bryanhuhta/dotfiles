@@ -115,7 +115,7 @@ When changing something that several profiles share, make the edit in each of th
 
 ### The repository root
 
-Nothing applies from the repository root: it holds the profile directories, the shared assets (`claude-home/`, `zed_settings.json`, the Docker build contexts), and the documentation. Root `.chezmoiignore` is a single `{{ fail }}` — chezmoi's default source directory is the repository root, so a machine that forgets `sourceDir` would otherwise apply every profile directory into `$HOME` as a literal directory.
+Nothing applies from the repository root: it holds the profile directories, the shared assets (`claude-home/`, `zed_settings.json`, the Docker build contexts), and the documentation. Reference material that informs the configuration without ever being applied — specifications, style guides — goes in `resources/`; add a row to `resources/README.md` when adding one. Root `.chezmoiignore` is a single `{{ fail }}` — chezmoi's default source directory is the repository root, so a machine that forgets `sourceDir` would otherwise apply every profile directory into `$HOME` as a literal directory.
 
 ### Adding a profile
 

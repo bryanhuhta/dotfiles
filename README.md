@@ -28,6 +28,10 @@ the repository root and are reached from a profile directory with
 `{{ .chezmoi.sourceDir | dir }}` in templates, or
 `$(dirname $(chezmoi source-path))` in scripts.
 
+Reference material about the configuration — specifications and style guides
+that inform it but are never applied — lives in
+[`resources`](resources/README.md), also at the repository root.
+
 Because chezmoi's default source directory is the repository root, root
 `.chezmoiignore` fails with an explanatory error rather than letting a machine
 with no `sourceDir` apply every profile directory into `$HOME` as literal
