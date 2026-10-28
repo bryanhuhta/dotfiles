@@ -1,0 +1,42 @@
+# Packages for personal-bazzite, installed by
+# .chezmoiscripts/run_onchange_install-packages.py.
+#
+# Bazzite is an atomic (image-based) distro, so the host filesystem is not a
+# place to install packages into. Its docs point at two user-level methods that
+# need neither root nor a reboot: Homebrew for command-line tools, and Flatpak
+# for graphical apps. (Layering with rpm-ostree is the root-plus-reboot last
+# resort, and is deliberately not used here.) Both come preinstalled on Bazzite.
+#
+# The list is rendered into that script, so editing this file changes the
+# script's content and chezmoi re-runs it on the next apply.
+#
+# Converges only: missing packages are installed, already-installed packages
+# are left at their current version, and a package removed from this list is
+# NOT uninstalled. Upgrade with `brew upgrade`, remove with `brew uninstall`
+# or `flatpak uninstall`.
+
+[packages]
+
+# Homebrew taps. The key must exist even when empty: the install script ranges
+# over it, and chezmoi renders templates with missingkey=error.
+taps = []
+
+# Homebrew formulae -- command-line tools (Bazzite's recommended CLI method).
+brews = [
+    # Core
+    "neovim",   # Editor
+
+    # Languages
+    "go",       # go
+    "zig",      # zig
+
+    # Neovim dependencies
+    "fzf",      # Fuzzy finder
+    "gopls",    # Go language server
+]
+
+# Flatpaks -- graphical apps (Bazzite's recommended GUI method), installed
+# --user from Flathub.
+flatpaks = [
+    "org.chromium.Chromium",  # Chromium web browser
+]

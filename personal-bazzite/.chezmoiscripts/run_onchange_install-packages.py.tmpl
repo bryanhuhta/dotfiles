@@ -1,0 +1,226 @@
+#!/usr/bin/python3
+"""Install the Homebrew formulae and flatpaks declared in .chezmoidata/packages.toml.
+
+Do not edit the package list here. It is rendered from packages.toml, and
+chezmoi re-runs this script whenever that rendering changes.
+
+Bazzite is an atomic distro, so packages go into user-level managers rather than
+the host filesystem: Homebrew for command-line tools, Flatpak for graphical apps.
+Both ship preinstalled and neither needs root, so this script never calls sudo
+and never touches rpm-ostree -- layering is the manual last resort.
+
+Converges only: missing packages are installed, already-installed packages are
+left at their current version, and a package removed from the list is NOT
+uninstalled. Upgrade deliberately with `brew upgrade`.
+
+`brew bundle install` installs *and upgrades* by default, so an edit to
+packages.toml would otherwise upgrade every outdated formula on the machine.
+--no-upgrade holds installed packages where they are. (`brew install` may still
+pull a dependency forward if a genuinely new package needs it.)
+
+Before installing, anything installed that packages.toml does not declare is
+listed and confirmed, so a package that only exists because it was installed by
+hand is visible rather than quietly diverging. Formulae are compared using
+`brew list --installed-on-request`, which excludes packages present only as
+another package's dependency. That reflects how a package was installed, not
+what it is now: something pulled in as a dependency and later installed directly
+may not be marked as requested, so it would not show up here.
+
+Runs under /usr/bin/python3, the system interpreter, rather than
+`/usr/bin/env python3`, so the script does not depend on PATH or on a brew
+python that may be mid-upgrade. Standard library only.
+"""
+
+import json
+import os
+import subprocess
+import sys
+
+# Linuxbrew's fixed prefix, where Bazzite preinstalls Homebrew.
+BREW = "/home/linuxbrew/.linuxbrew/bin/brew"
+FLATPAK = "/usr/bin/flatpak"
+
+FLATHUB = "https://dl.flathub.org/repo/flathub.flatpakrepo"
+
+PACKAGES = json.loads(r"""
+{{ dict "taps" .packages.taps "brews" .packages.brews "flatpaks" .packages.flatpaks | toPrettyJson }}
+""")
+
+
+def brew(*args):
+    """Return brew's stdout as a list of words, or None if the command failed."""
+    completed = subprocess.run([BREW, *args], capture_output=True, text=True)
+    if completed.returncode != 0:
+        print(
+            "packages: {} failed (exit {})".format(
+                " ".join(("brew",) + args), completed.returncode
+            ),
+            file=sys.stderr,
+        )
+        if completed.stderr.strip():
+            print(completed.stderr.strip(), file=sys.stderr)
+        return None
+    return completed.stdout.split()
+
+
+def capture(argv):
+    """Return the command's stdout as a list of words, or None if it failed."""
+    completed = subprocess.run(argv, capture_output=True, text=True)
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.split()
+
+
+def formula_name(spec):
+    """Reduce a Brewfile formula spec to the name brew reports in `brew list`.
+
+    A tap-qualified entry such as owner/tap/foo is installed and listed as foo,
+    so without this the same package looks both undeclared and missing.
+    """
+    return spec.split("/")[-1]
+
+
+def installed_flatpaks():
+    ids = capture([FLATPAK, "--user", "list", "--app", "--columns=application"])
+    return set(ids) if ids is not None else set()
+
+
+def confirm(prompt):
+    """Ask on the terminal, returning None when there is nobody to ask.
+
+    The prompt reads /dev/tty rather than stdin: chezmoi does not promise a
+    usable stdin for scripts, and the terminal is what a person is actually
+    sitting at. Opening it twice, once to read and once to write, is deliberate:
+    a single "r+" handle is not seekable on every platform, which would make a
+    real terminal look like an absent one.
+
+    A closed terminal reads as EOF, which is not a yes.
+    """
+    try:
+        with open("/dev/tty", "w") as out, open("/dev/tty", "r") as tty_in:
+            out.write(prompt)
+            out.flush()
+            answer = tty_in.readline()
+    except OSError:
+        return None
+    return answer.strip().lower() in ("y", "yes")
+
+
+def report_unmanaged():
+    """List undeclared packages and confirm, or return silently if there are none."""
+    declared_brews = {formula_name(spec) for spec in PACKAGES["brews"]}
+    installed_brews = brew("list", "--formula", "--installed-on-request")
+    if installed_brews is None:
+        # Without a reliable inventory the comparison would invent unmanaged
+        # packages or hide real ones. Say so and leave the install to proceed.
+        print(
+            "packages: could not inventory installed formulae, "
+            "skipping the unmanaged check",
+            file=sys.stderr,
+        )
+        return
+
+    undeclared_brews = sorted(set(installed_brews) - declared_brews)
+    undeclared_flatpaks = sorted(installed_flatpaks() - set(PACKAGES["flatpaks"]))
+    if not undeclared_brews and not undeclared_flatpaks:
+        return
+
+    total = len(undeclared_brews) + len(undeclared_flatpaks)
+    print(
+        "packages: {} installed package{} not declared in packages.toml:".format(
+            total, "" if total == 1 else "s"
+        )
+    )
+    for name in undeclared_brews:
+        print("  formula  {}".format(name))
+    for name in undeclared_flatpaks:
+        print("  flatpak  {}".format(name))
+    print(
+        "  Add them to .chezmoidata/packages.toml to manage them, "
+        "or `brew uninstall` / `flatpak uninstall` to drop them."
+    )
+    # stdout is block-buffered when it is not a terminal, so without this the
+    # listing surfaces after brew's output instead of before it.
+    sys.stdout.flush()
+
+    answer = confirm("  Continue with the package install? [y/N] ")
+    if answer is None:
+        print("packages: no terminal to confirm on, continuing", file=sys.stderr)
+        return
+    if not answer:
+        # Exiting non-zero keeps chezmoi from recording this script as run, so
+        # the next apply asks again instead of skipping the install for good.
+        print("packages: aborted", file=sys.stderr)
+        sys.exit(1)
+
+
+def brewfile():
+    lines = ['tap "{}"'.format(tap) for tap in PACKAGES["taps"]]
+    lines += ['brew "{}"'.format(spec) for spec in PACKAGES["brews"]]
+    return "\n".join(lines) + "\n"
+
+
+def install_brews():
+    if not PACKAGES["taps"] and not PACKAGES["brews"]:
+        return True
+    completed = subprocess.run(
+        [BREW, "bundle", "install", "--no-upgrade", "--file=-"],
+        input=brewfile(),
+        text=True,
+    )
+    if completed.returncode != 0:
+        print(
+            "packages: brew bundle failed (exit {})".format(completed.returncode),
+            file=sys.stderr,
+        )
+        return False
+    return True
+
+
+def install_flatpaks():
+    if not PACKAGES["flatpaks"]:
+        return True
+    if not os.path.exists(FLATPAK):
+        print(
+            "packages: {} not found, skipping flatpaks".format(FLATPAK),
+            file=sys.stderr,
+        )
+        return False
+
+    subprocess.run(
+        [FLATPAK, "--user", "remote-add", "--if-not-exists", "flathub", FLATHUB],
+        check=False,
+    )
+
+    present = installed_flatpaks()
+    missing = [app for app in PACKAGES["flatpaks"] if app not in present]
+    if not missing:
+        return True
+
+    print("packages: installing flatpaks {}".format(" ".join(missing)))
+    sys.stdout.flush()
+    completed = subprocess.run(
+        [FLATPAK, "--user", "install", "-y", "--noninteractive", "flathub", *missing]
+    )
+    return completed.returncode == 0
+
+
+def main():
+    if not os.path.exists(BREW):
+        print("packages: {} not found".format(BREW), file=sys.stderr)
+        sys.exit(1)
+
+    # Skips the metadata refresh only; --no-upgrade is what protects installed
+    # packages from being upgraded.
+    os.environ["HOMEBREW_NO_AUTO_UPDATE"] = "1"
+
+    report_unmanaged()
+
+    ok = install_brews()
+    ok = install_flatpaks() and ok
+
+    if not ok:
+        sys.exit(1)
+
+
+main()

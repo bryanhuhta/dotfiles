@@ -12,11 +12,12 @@ this repository. Nothing applies from the repository root.
 
 The profiles that exist today:
 
-| Profile           | Source directory   |
-|-------------------|--------------------|
-| `personal-mac`    | `personal-mac/`    |
-| `work-mac`        | `work-mac/`        |
-| `personal-fedora` | `personal-fedora/` |
+| Profile            | Source directory    |
+|--------------------|---------------------|
+| `personal-mac`     | `personal-mac/`     |
+| `work-mac`         | `work-mac/`         |
+| `personal-fedora`  | `personal-fedora/`  |
+| `personal-bazzite` | `personal-bazzite/` |
 
 Adding one is just another top-level directory plus a machine pointed at it.
 
