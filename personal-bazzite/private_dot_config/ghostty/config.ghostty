@@ -1,0 +1,8 @@
+font-feature = -calt
+font-feature = -liga
+font-feature = -dlig
+
+# Run Homebrew's zsh instead of the passwd login shell, which stays bash
+# because changing it on Bazzite can break graphical login. Ghostty on Linux
+# does not start a login shell by itself, so pass --login to run .zprofile.
+command = direct:/home/linuxbrew/.linuxbrew/bin/zsh --login

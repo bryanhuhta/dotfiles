@@ -1,0 +1,16 @@
+# Login-shell setup: PATH and one-time / slow tool initialization.
+#
+# Ghostty on Linux does not start a login shell by itself, so its config
+# runs zsh with --login to make sure this file runs.
+#
+# Exports here are inherited by all child shells, so .zshrc aliases that
+# reference these variables resolve correctly even in non-login subshells.
+
+# Homebrew (HOMEBREW_PREFIX, MANPATH, INFOPATH, completions in fpath, ...).
+# Like Bazzite's /etc/profile.d/brew.sh, append brew to PATH after the system
+# directories so brew formulae never shadow system binaries such as dbus.
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh | grep -Ev '\bPATH=')"
+path+=("$HOMEBREW_PREFIX/bin" "$HOMEBREW_PREFIX/sbin")
+
+# Utility scripts
+path=("$HOME/.local/bin" $path)

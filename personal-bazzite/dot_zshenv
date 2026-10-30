@@ -1,0 +1,17 @@
+# Env vars needed by every shell, including non-interactive (make, git
+# hooks, scripts, cron). Keep this fast and side-effect-free.
+#
+# PATH lives in .zprofile, next to the Homebrew setup.
+
+export EDITOR=nvim
+
+# XDG Base Directory spec. The KDE session does not set these, but many
+# cross-platform tools (nvim, git, fish, ripgrep, ...) respect them.
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_STATE_HOME="$HOME/.local/state"
+export XDG_CACHE_HOME="$HOME/.cache"
+
+# Dedupe PATH and fpath; later additions that are already present become
+# no-ops.
+typeset -U path PATH fpath
