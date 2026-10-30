@@ -24,15 +24,29 @@ taps = []
 # Homebrew formulae -- command-line tools (Bazzite's recommended CLI method).
 brews = [
     # Core
+    "chezmoi",  # Dotfile manager
+    "jq",       # JSON tooling
     "neovim",   # Editor
+    "ripgrep",  # grep-like search
+    "tree",     # Tree printing
+    "zsh",      # zsh shell
 
     # Languages
     "go",       # go
     "zig",      # zig
 
+    # Development
+    "cmake",    # C++ build tool
+    "gh",       # GitHub CLI
+    "git",      # Git
+    "git-lfs",  # Git LFS
+
+
     # Neovim dependencies
-    "fzf",      # Fuzzy finder
-    "gopls",    # Go language server
+    "fzf",             # Fuzzy finder
+    "gopls",           # Go language server
+    "tree-sitter-cli", # Tree Sitter CLI
+    "zls",             # Zig language server
 ]
 
 # Flatpaks -- graphical apps (Bazzite's recommended GUI method), installed
