@@ -40,6 +40,7 @@ brews = [
     "gh",       # GitHub CLI
     "git",      # Git
     "git-lfs",  # Git LFS
+    "ninja",    # Build tool
 
 
     # Neovim dependencies
