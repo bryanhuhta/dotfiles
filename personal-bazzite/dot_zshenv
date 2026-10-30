@@ -12,6 +12,8 @@ export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_STATE_HOME="$HOME/.local/state"
 export XDG_CACHE_HOME="$HOME/.cache"
 
+alias open="xdg-open"
+
 # Dedupe PATH and fpath; later additions that are already present become
 # no-ops.
 typeset -U path PATH fpath
