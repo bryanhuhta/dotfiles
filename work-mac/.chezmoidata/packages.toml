@@ -40,6 +40,7 @@ brews = [
   "git-lfs",              # LFS for Git
   "go",                   # go programming language
   "gradle",               # JVM build tool
+  "hyperfine",            # Benchmarking tool
   "jenv",                 # Java environment manager
   "k6",                   # Load testing tool
   "libpq",                # Postgres client tools (psql)
