@@ -1,0 +1,18 @@
+#!/bin/bash
+## Keep the computer awake until you press Ctrl+C.
+##
+## Holds a systemd idle and sleep inhibitor lock while it runs, so the
+## screen does not dim or lock and the system does not suspend.
+##
+## Usage: wakeup [-h]
+##   -h    Print this help message
+
+set -euo pipefail
+
+if [[ "${1:-}" == "-h" ]]; then
+  grep '^##' "$0" | sed -E 's/^## ?//'
+  exit 0
+fi
+
+echo "Keeping the computer awake. Press Ctrl+C to stop."
+exec systemd-inhibit --what=idle:sleep --who=wakeup --why="wakeup command" sleep infinity
