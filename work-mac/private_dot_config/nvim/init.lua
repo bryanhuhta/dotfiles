@@ -171,6 +171,16 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+-- Two-space indentation in JavaScript and TypeScript files
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+  callback = function()
+    vim.opt_local.tabstop = 2
+    vim.opt_local.shiftwidth = 2
+    vim.opt_local.expandtab = true
+  end,
+})
+
 -- `dart format` is hard-coded to two-space indentation and offers no option to
 -- change it, and Neovim ships no indent/dart.vim, so set it per buffer.
 vim.api.nvim_create_autocmd("FileType", {

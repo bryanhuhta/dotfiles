@@ -171,6 +171,16 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+-- Two-space indentation in JavaScript and TypeScript files
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+  callback = function()
+    vim.opt_local.tabstop = 2
+    vim.opt_local.shiftwidth = 2
+    vim.opt_local.expandtab = true
+  end,
+})
+
 -- Treesitter-based folding for markdown
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "markdown",
