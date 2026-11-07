@@ -34,6 +34,7 @@ brews = [
   "git",                  # Version control system
   "git-lfs",              # Large file storage (gitconfig declares required lfs filters)
   "go",                   # go programming language
+  "graphviz",             # visualization renderer
   "pipx",                 # Python environment manager
   "uv",                   # Python environment manager
   "zig",                  # Zig programming language
