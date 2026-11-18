@@ -43,3 +43,23 @@ alias ktxlist="kubectx -c | xargs printf 'current: %s\n\n' && kubectx | grep -vE
 
 # k6 dev config
 alias k6dev="K6_CLOUD_HOST=https://ingest.staging.k6.io k6"
+
+# nnn quitcd helper
+n ()
+{
+    # Block nesting of nnn in subshells
+    [ "${NNNLVL:-0}" -eq 0 ] || {
+        echo "nnn is already running"
+        return
+    }
+
+    export NNN_TMPFILE="${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.lastd"
+    export NNN_COLORS='#51e2d0c652d59f7b;36735673'
+
+    command nnn -e -d -D -H -Q -R "$@"
+
+    [ ! -f "$NNN_TMPFILE" ] || {
+        . "$NNN_TMPFILE"
+        rm -f -- "$NNN_TMPFILE" > /dev/null
+    }
+}
