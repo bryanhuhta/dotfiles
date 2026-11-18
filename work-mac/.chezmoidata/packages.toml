@@ -20,6 +20,7 @@ brews = [
   "chezmoi",              # Dotfile manager
   "jq",                   # Parse JSON from the command line
   "neovim",               # Neovim, of course
+  "nnn",                  # File manager
   "tree",                 # Display directories as trees
   "the_silver_searcher",  # ag (better version of grep)
   "zsh",                  # Shell
