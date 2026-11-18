@@ -57,7 +57,7 @@ n ()
     export NNN_COLORS='#51e2d0c652d59f7b;36735673'
     export NNN_BMS="h:$HOME;g:$HOME/grafana;p:$HOME/projects;t:/tmp;P:$HOME/grafana/pyroscope"
 
-    command nnn -e -d -D -H -Q -R "$@"
+    command nnn -e -d -D -H -Q -R -U "$@"
 
     [ ! -f "$NNN_TMPFILE" ] || {
         . "$NNN_TMPFILE"
