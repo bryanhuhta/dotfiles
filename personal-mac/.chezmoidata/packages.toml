@@ -48,6 +48,7 @@ brews = [
 casks = [
   # Personal tools
   "gnucash",        # Double-entry accounting
+  "gimp",           # Photo editing
 
   # Development tools
   "claude-code",    # Claude Code
